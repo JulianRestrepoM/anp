@@ -1,0 +1,7 @@
+/home/julian/Uni/Thesis/anp/anp_netskeleton-master/CMakeFiles/install/strip.dir
+/home/julian/Uni/Thesis/anp/anp_netskeleton-master/CMakeFiles/install.dir
+/home/julian/Uni/Thesis/anp/anp_netskeleton-master/CMakeFiles/list_install_components.dir
+/home/julian/Uni/Thesis/anp/anp_netskeleton-master/CMakeFiles/rebuild_cache.dir
+/home/julian/Uni/Thesis/anp/anp_netskeleton-master/CMakeFiles/edit_cache.dir
+/home/julian/Uni/Thesis/anp/anp_netskeleton-master/CMakeFiles/install/local.dir
+/home/julian/Uni/Thesis/anp/anp_netskeleton-master/CMakeFiles/anpnetstack.dir
