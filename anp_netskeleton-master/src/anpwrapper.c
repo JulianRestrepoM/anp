@@ -23,6 +23,8 @@
 #include "linklist.h"
 #include "anpwrapper.h"
 #include "init.h"
+#include "socket.h"
+#include "socket.c"
 
 
 static int (*__start_main)(int (*main) (int, char * *, char * *), int argc, \
@@ -55,7 +57,8 @@ static int is_socket_supported(int domain, int type, int protocol)
 int socket(int domain, int type, int protocol) {
     if (is_socket_supported(domain, type, protocol)) {
         //TODO: implement your logic here
-        return -ENOSYS;
+        struct socket *newSocket = createSocket(domain, type, protocol);
+        return newSocket->fileDescriptor;
     }
     // if this is not what anpnetstack support, let it go, let it go!
     return _socket(domain, type, protocol);
