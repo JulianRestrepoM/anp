@@ -24,8 +24,8 @@
 #include "anpwrapper.h"
 #include "init.h"
 #include "socket.h"
-#include "socket.c"
-
+#include "connection.h"
+#include "tcp.h"
 
 static int (*__start_main)(int (*main) (int, char * *, char * *), int argc, \
                            char * * ubp_av, void (*init) (void), void (*fini) (void), \
@@ -58,7 +58,7 @@ int socket(int domain, int type, int protocol) {
     if (is_socket_supported(domain, type, protocol)) {
         //TODO: implement your logic here
         struct socket *newSocket = createSocket(domain, type, protocol);
-        return newSocket->fileDescriptor;
+        return newSocket->fd;
     }
     // if this is not what anpnetstack support, let it go, let it go!
     return _socket(domain, type, protocol);
@@ -67,10 +67,36 @@ int socket(int domain, int type, int protocol) {
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
-    bool is_anp_sockfd = false;
+    bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd){
         //TODO: implement your logic here
-        return -ENOSYS;
+
+        if(connectionHead.connectionListHead == NULL) {
+            initConnectionList();
+        }
+
+        struct sockaddr_in *sin = (struct sockaddr_in *) addr;
+        struct socket *currSocket = getSocketByFd(sockfd);
+        if (currSocket == NULL) {
+            printf("error: Socket not found\n");
+            return -1;
+        }
+        currSocket->dstaddr = ntohl((uint32_t) sin->sin_addr.s_addr);
+        currSocket->dstaddrlen = addrlen;
+        currSocket->srcport = SRC_PORT;
+        currSocket->srcaddr = SRC_ADDR;
+        memcpy(&currSocket->dstport, &sin->sin_port, sizeof(sin->sin_port));
+
+        struct connection *newConnection = allocConnection();
+        addNewConnection(newConnection, currSocket);
+
+        if (doTcpHandshake(newConnection) != 0) {
+            printf("Handshake failed\n");
+            return -1;
+        }
+
+
+        return 0;
     }
     // the default path
     return _connect(sockfd, addr, addrlen);
@@ -80,10 +106,20 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 {
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
-    bool is_anp_sockfd = false;
+    bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         //TODO: implement your logic here
-        return -ENOSYS;
+
+        printf("send called for len %zu\n", len);
+        struct connection *connection = findConnectionByFd(sockfd);
+        if (connection == NULL) {
+            printf("error: Socket not found\n");
+        }
+        if (getState(connection) != ESTABLISHED) {
+            printf("error: connection not in ESTABLISHED state\n");
+            return -1;
+        }
+        return sendTcpData(connection, buf, len);
     }
     // the default path
     return _send(sockfd, buf, len, flags);
@@ -91,10 +127,22 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 
 ssize_t recv (int sockfd, void *buf, size_t len, int flags){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
-    bool is_anp_sockfd = false;
+    bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         //TODO: implement your logic here
-        return -ENOSYS;
+        printf("recv called clientside\n");
+        struct connection *connection = findConnectionByFd(sockfd);
+        if (connection == NULL) {
+            printf("error: Socket not found\n");
+        }
+        if (getState(connection) != ESTABLISHED) {
+            printf("error: connection not in ESTABLISHED state\n");
+            return -1;
+        }
+        setReadyToRecv(connection, true);
+        int ret = getData(connection, buf, len);
+        setReadyToRecv(connection, false);
+        return ret;
     }
     // the default path
     return _recv(sockfd, buf, len, flags);
@@ -102,10 +150,16 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
 
 int close (int sockfd){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
-    bool is_anp_sockfd = false;
+    bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
-        //TODO: implement your logic here
-        return -ENOSYS;
+        struct connection *toClose = findConnectionByFd(sockfd);
+        struct socket *sock = toClose->sock;
+        int ret = doTcpClose(toClose);
+        sockListRemove(sock);
+        connectionListRemove(toClose);
+
+        free(toClose);
+        return ret;
     }
     // the default path
     return _close(sockfd);

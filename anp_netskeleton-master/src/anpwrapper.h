@@ -18,6 +18,9 @@
 #ifndef ANPNETSTACK_ANPWRAPPER_H
 #define ANPNETSTACK_ANPWRAPPER_H
 
+#define SRC_PORT 46660
+#define SRC_ADDR 0x0a000004
+
 void _function_override_init();
 
 #endif //ANPNETSTACK_ANPWRAPPER_H

@@ -6,10 +6,16 @@
 
 struct socket {
     struct list_head list;
-    int domain;
     int type;
+    int domain;
     int protocol;
-    int fileDescriptor;
+    int fd;
+    uint32_t srcaddr;
+    uint32_t dstaddr;
+    socklen_t dstaddrlen;
+    uint16_t dstport;
+    uint16_t srcport;
+
 };
 
 typedef struct SOCKET_HEAD {
@@ -21,6 +27,10 @@ socket_head sockHead;
 
 struct socket *createSocket(int domain, int type, int protocol);
 void initSocketList();
-void listAdd(struct socket *newSocket);\
+void sockListAdd(struct socket *newSocket);
+void sockListRemove(struct socket *toDelete);
+bool isFdUsed(int fd);
+struct socket *getSocketByFd(int fd);
+struct socket* allocSock();
 
 #endif //ANPNETSTACK_SOCKET_H
