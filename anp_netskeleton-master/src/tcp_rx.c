@@ -1,9 +1,15 @@
 #include "tcp.h"
+#include <inttypes.h> // to print Uint_t numbers
 
-int tcpRx(struct subuff *sub) {
+int tcpRx(struct subuff *sub) { 
+    /*the two edge cases I have to deal with. 1: server sends F flag before client. 2: server sends data with F flag */
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
     if((hdr->tcpAck == 1) && (hdr->tcpSyn == 1)) {
         return handleSynAck(sub);
+    }
+    if((hdr->tcpPsh == 1)&& (hdr->tcpFin == 1)) { //servre sends F with last bit of data
+        handleAck(sub);
+        // return handleFinAck(sub);
     }
     if((hdr->tcpAck == 1) && (hdr->tcpFin == 1)) {
         return handleFinAck(sub);
@@ -17,6 +23,7 @@ int handleAck(struct subuff *sub) {
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
     uint32_t ackNum = ntohl(hdr->tcpAckNum);
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum);
+    // printf("GETTING ACK %"PRIu32"\n", ackNum);
 
     if((incomingConnection != NULL) && (getWaitingForAck(incomingConnection) == true)) {
         setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
@@ -55,6 +62,7 @@ int handleSynAck(struct subuff *sub) {
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum - 1);
 
     if(incomingConnection == NULL) {
+        printf("THIS ONE 1\n");
         printf("Connection not found, invalid ACK\n");
         goto dropPkt;
     }
@@ -82,6 +90,9 @@ int handleFinAck(struct subuff *sub) {
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum - 1);
 
     if(incomingConnection == NULL) {
+        printf("GETTING ACK %"PRIu8"\n", ackNum);
+        //TODO:: Im not taking into account of the server initializing the F flag
+        printf("THIS ONE 2\n"); 
         printf("Connection not found, invalid ACK\n");
         goto dropPkt;
     }

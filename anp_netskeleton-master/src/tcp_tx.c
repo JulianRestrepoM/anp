@@ -44,6 +44,10 @@ struct subuff_head *dataSplit(struct connection *connection, const void *buf, si
     int lenToSend = maxSendLen;
     int lastSentPtr = 0;
 
+    if(len <= maxSendLen) { //if first packet is smaller than max send, then it sends maxsend instead of just len
+        lenToSend = len;
+    }
+
 
     struct subuff_head *subsToSend = (struct subuff_head *) malloc(sizeof(struct subuff_head));
     sub_queue_init(subsToSend);
@@ -60,6 +64,7 @@ struct subuff_head *dataSplit(struct connection *connection, const void *buf, si
         setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection) + lastSentPtr, getLastRecvSeq(connection));
 
         hdrToSend->tcpAck = 1;
+        hdrToSend->tcpPsh = 1;
         hdrToSend->tcpChecksum = do_tcp_csum((uint8_t *) hdrToSend, TCP_HDR_LEN + lenToSend, IPP_TCP,
                                               htonl(connection->sock->srcaddr),
                                               htonl(connection->sock->dstaddr));

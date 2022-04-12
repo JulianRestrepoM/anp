@@ -115,7 +115,7 @@ int waitForAck(struct connection *connection) {
         return -1;
     }
 
-    timeToWait.tv_sec += 1; //wait for 1 second
+    timeToWait.tv_sec += 5; //wait for 1 second
     pthread_mutex_lock(&connection->connectionLock);
     int ret = pthread_cond_timedwait(&connection->ackRecv, &connection->connectionLock, &timeToWait);
     pthread_mutex_unlock(&connection->connectionLock);
@@ -136,7 +136,7 @@ int waitForFinACk(struct connection *connection) {
         return -1;
     }
 
-    timeToWait.tv_sec += 1; //wait for 1 second
+    timeToWait.tv_sec += 5; //wait for 1 second
     pthread_mutex_lock(&connection->connectionLock);
     int ret = pthread_cond_timedwait(&connection->finAckRecv, &connection->connectionLock, &timeToWait);
     pthread_mutex_unlock(&connection->connectionLock);
@@ -182,6 +182,7 @@ int doTcpClose(struct connection *connection) {
         return -1;
     }
 
+
     int ret = sendFin(connection);
     if(ret < 0) {
         printf("sending fin failed\n");
@@ -223,10 +224,16 @@ int getData(struct connection *connection, void *buf, size_t len) {
                 currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
                 void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN;
                 void *dest = buf + lenRecv;
-                memcpy(dest, src, currentSize);
                 
-                lenRecv += currentSize;
-
+                if((currentSize + lenRecv) > len ) {
+                    currentSize = len -lenRecv;
+                    memcpy(dest, src, currentSize);
+                }
+                else {
+                    memcpy(dest, src, currentSize);
+                    lenRecv += currentSize;
+                }
+                
                 int ret = sendAck(connection, getLastRecvSeq(connection) + currentSize);
                 if(ret < 0) {
                     printf("failed to send ACK\n");

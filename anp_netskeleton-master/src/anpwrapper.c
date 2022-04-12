@@ -152,6 +152,7 @@ int close (int sockfd){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
+        printf("CLOSSSINGGGG\n");
         struct connection *toClose = findConnectionByFd(sockfd);
         struct socket *sock = toClose->sock;
         int ret = doTcpClose(toClose);

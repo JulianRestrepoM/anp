@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     struct sockaddr_in server_addr;
     char debug_buffer[INET_ADDRSTRLEN];
     char tx_buffer[TEST_BUF_SIZE];
-    char rx_buffer[TEST_BUF_SIZE];
+    char rx_buffer[35000];
     bzero(tx_buffer, TEST_BUF_SIZE);
     bzero(rx_buffer, TEST_BUF_SIZE);
 
@@ -81,43 +81,27 @@ int main(int argc, char** argv)
     inet_ntop( AF_INET, &server_addr.sin_addr, debug_buffer, sizeof(debug_buffer));
     printf("OK: connected to the server at %s \n", debug_buffer);
 
-    // write a pattern
-    write_pattern(tx_buffer, TEST_BUF_SIZE);
+    //send GET
+    char* getHTTP = "GET / HTTP/1.1\r\nHost: www.w3.org\r\nUser-Agent: curl/7.54.0\r\nAccept: */*\r\n\r\n";
+    int sendRet = send(server_fd, getHTTP, strlen(getHTTP), 0);
+    printf("SENT GET REQUST SIZE: %d\n", sendRet);
 
-    // send test buffer
-    while (so_far < TEST_BUF_SIZE){
-        ret = send(server_fd, tx_buffer + so_far, TEST_BUF_SIZE - so_far, 0);
-        if( 0 > ret){
-            printf("Error: send failed with ret %d and errno %d \n", ret, errno);
+    // printf("RECV SIZE: %ld\n",recv(server_fd, rx_buffer, sizeof(rx_buffer), 0));
+    int soFar = 0;
+    int htmlSize = 31322; //this is the exact size of the html from w3.org (INCLUDES: the OK 200 message) so prob subtract first message and get size? should also be + 1
+    while(soFar < htmlSize) {
+        ret = recv(server_fd, rx_buffer + soFar, htmlSize - soFar, 0);
+        if(ret < 0) {
+            printf("Error: recv failed\n");
             return -ret;
         }
-        so_far+=ret;
-        printf("\t [send loop] %d bytes, looping again, so_far %d target %d \n", ret, so_far, TEST_BUF_SIZE);
+        soFar += ret;
+        printf("SOFAR = %d\n", soFar);
     }
+    
+    printf("%s\n", rx_buffer);
+    close(server_fd);
 
-    printf("OK: buffer sent successfully \n");
-    printf("OK: waiting to receive data \n");
-    // receive test buffer
-    so_far = 0;
-    while (so_far < TEST_BUF_SIZE) {
-        ret = recv(server_fd, rx_buffer + so_far, TEST_BUF_SIZE - so_far, 0);
-        if( 0 > ret){
-            printf("Error: recv failed with ret %d and errno %d \n", ret, errno);
-            return -ret;
-        }
-        so_far+=ret;
-        printf("\t [receive loop] %d bytes, looping again, so_far %d target %d \n", ret, so_far, TEST_BUF_SIZE);
-    }
-    printf("Results of pattern matching: %s \n", match_pattern(rx_buffer, TEST_BUF_SIZE));
-    // close the socket
-    // now we sleep a bit to drain the queues and then trigger the close logic
-    printf("A 5 sec wait before calling close \n");
-    sleep(5);
-    ret = close(server_fd);
-    if(ret){
-        printf("Shutdown was not clean , ret %d errno %d \n ", ret, errno);
-        return -ret;
-    }
-    printf("OK: shutdown was fine. Good bye!\n");
+
     return 0;
 }
