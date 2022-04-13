@@ -8,10 +8,12 @@ int tcpRx(struct subuff *sub) {
         return handleSynAck(sub);
     }
     if((hdr->tcpPsh == 1)&& (hdr->tcpFin == 1)) { //servre sends F with last bit of data
-        handleAck(sub);
+        printf("HELLO THHER\n");
+        return handleAck(sub);
         // return handleFinAck(sub);
     }
     if((hdr->tcpAck == 1) && (hdr->tcpFin == 1)) {
+        printf("HELLO THHER 2\n");
         return handleFinAck(sub);
     }
     if(hdr->tcpAck == 1) {
@@ -35,6 +37,11 @@ int handleAck(struct subuff *sub) {
         return 0;
     }
     else if(incomingConnection == NULL) {
+        incomingConnection = findConnectionBySeqNum(ackNum - 1);
+        if(incomingConnection != NULL) {
+            return handleFinAck(sub);
+        }
+        printf("ITS HEREEEEE\n");
         printf("error: could not find connection\n");
         goto dropPkt;
     }
@@ -47,12 +54,12 @@ int handleAck(struct subuff *sub) {
 }
 
 int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct tcpHdr *hdr) {
+    
     setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
 
     pthread_mutex_lock(&incomingConnection->connectionLock);
     sub_queue_tail(incomingConnection->recvPkts, sub);
     pthread_mutex_unlock(&incomingConnection->connectionLock);
-
     return 0;
 }
 
@@ -90,7 +97,6 @@ int handleFinAck(struct subuff *sub) {
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum - 1);
 
     if(incomingConnection == NULL) {
-        printf("GETTING ACK %"PRIu8"\n", ackNum);
         //TODO:: Im not taking into account of the server initializing the F flag
         printf("THIS ONE 2\n"); 
         printf("Connection not found, invalid ACK\n");

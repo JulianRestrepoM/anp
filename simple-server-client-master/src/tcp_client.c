@@ -99,8 +99,15 @@ int main(int argc, char** argv)
         printf("SOFAR = %d\n", soFar);
     }
     
-    printf("%s\n", rx_buffer);
+    //write html to file.
+    FILE *fp;
+    fp = fopen("theStuff.html", "w");
+    fputs(rx_buffer, fp);
+    fclose(fp);
+    // printf("%s\n", rx_buffer);
     close(server_fd);
+
+    
 
 
     return 0;

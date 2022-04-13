@@ -1,4 +1,5 @@
 #include "tcp.h"
+#include <inttypes.h> // to print Uint_t numbers
 
 void setGeneralOptionsTcpHdr(struct tcpHdr *hdr, struct connection *connection, uint32_t seqNum, uint32_t ackNum) {
     hdr->tcpSource = htons(connection->sock->srcport);
@@ -182,13 +183,11 @@ int doTcpClose(struct connection *connection) {
         return -1;
     }
 
-
     int ret = sendFin(connection);
     if(ret < 0) {
         printf("sending fin failed\n");
         return ret;
     }
-
     setState(connection, FIN_WAIT_1);
     ret = waitForFinACk(connection);
     if (ret < 0) {
@@ -202,7 +201,6 @@ int doTcpClose(struct connection *connection) {
         printf("ack failed to send\n");
         return ret;
     }
-
     setState(connection, CLOSED);
     return 0;
 }
@@ -221,12 +219,14 @@ int getData(struct connection *connection, void *buf, size_t len) {
                 pthread_mutex_unlock(&connection->connectionLock);
                 ipHdr = IP_HDR_FROM_SUB(current);
 
+                //TODO: it seems to only save max 536 at a time. and overwrites first half of packet larger
                 currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
                 void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN;
                 void *dest = buf + lenRecv;
                 
                 if((currentSize + lenRecv) > len ) {
                     currentSize = len -lenRecv;
+                    lenRecv += currentSize;
                     memcpy(dest, src, currentSize);
                 }
                 else {
@@ -235,6 +235,7 @@ int getData(struct connection *connection, void *buf, size_t len) {
                 }
                 
                 int ret = sendAck(connection, getLastRecvSeq(connection) + currentSize);
+                setLastRecvSeqNum(connection, getLastRecvSeq(connection) + currentSize);
                 if(ret < 0) {
                     printf("failed to send ACK\n");
                     return -1;

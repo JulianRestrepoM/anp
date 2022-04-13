@@ -11,6 +11,7 @@
 #define FIN_WAIT_1 3
 #define FIN_WAIT_2 4
 #define TIME_WAIT 5
+#define CLOSE_WAIT 6 //TODO: probably have to set the proper states when server initiantes CLosing
 
 
 struct connection {
