@@ -38,6 +38,9 @@ void sockListRemove(struct socket *toDelete) {
 bool isFdUsed(int fd) {
     struct list_head *theFd;
     struct socket *currSocket;
+    if(sockHead.listHead == NULL) {
+        return false;
+    }
     list_for_each(theFd, sockHead.listHead) {
         currSocket = list_entry(theFd, struct socket, list);
         if(currSocket->fd == fd) {
