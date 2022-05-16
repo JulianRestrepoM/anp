@@ -37,6 +37,12 @@ static ssize_t (*_recv)(int fd, void *buf, size_t n, int flags) = NULL;
 static int (*_connect)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) = NULL;
 static int (*_socket)(int domain, int type, int protocol) = NULL;
 static int (*_close)(int sockfd) = NULL;
+static int (*_setsockopt)(int sockfd, int level, int optname, const void *optval, socklen_t optlen) = NULL;
+static int (*_getsockopt)(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) = NULL;
+static ssize_t (*_sendto)(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) = NULL;
+static ssize_t (*_recvfrom)(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) = NULL;
+static int (*_fcntl)(int fd, int cmd, ...) = NULL;
+static int (*_getpeername)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
@@ -55,9 +61,11 @@ static int is_socket_supported(int domain, int type, int protocol)
 
 // TODO: ANP milestone 3 -- implement the socket, and connect calls
 int socket(int domain, int type, int protocol) {
+    printf("CLIENT CALLED: socket: domain=%d, type=%d, protocol=%d\n", domain, type, protocol);
     if (is_socket_supported(domain, type, protocol)) {
         //TODO: implement your logic here
         struct socket *newSocket = createSocket(domain, type, protocol);
+        printf("ANP SOCKET %d\n", newSocket->fd);
         return newSocket->fd;
     }
     // if this is not what anpnetstack support, let it go, let it go!
@@ -66,6 +74,7 @@ int socket(int domain, int type, int protocol) {
 
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
+    printf("CLIENT CALLED: connect: sockfd=%d\n", sockfd);
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd){
@@ -94,8 +103,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
             printf("Handshake failed\n");
             return -1;
         }
-
-
+        printf("connect sucess\n");
         return 0;
     }
     // the default path
@@ -105,6 +113,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 // TODO: ANP milestone 5 -- implement the send, recv, and close calls
 ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 {
+    printf("CLIENT CALLED: send: sockfd%d\n", sockfd);
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
@@ -127,6 +136,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 
 ssize_t recv (int sockfd, void *buf, size_t len, int flags){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
+    printf("CLIENT CALLED: recv: sockfd%d\n", sockfd);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         //TODO: implement your logic here
@@ -150,9 +160,9 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
 
 int close (int sockfd){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
+    printf("CLIENT CALLED: close: sockf=%d\n", sockfd);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
-        printf("CLOSSSINGGGG\n");
         struct connection *toClose = findConnectionByFd(sockfd);
         struct socket *sock = toClose->sock;
         int ret = doTcpClose(toClose);
@@ -166,6 +176,64 @@ int close (int sockfd){
     return _close(sockfd);
 }
 
+int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen) {
+    printf("CLIENT CALLED: setsockopt; sockf=%d, level=%d, optname=%d, optval=%p, oplen=%d\n", sockfd, level, optname, optval, optlen);
+    if(isFdUsed(sockfd)) {
+        printf("HELLO???\n");
+        return 0;
+    }
+    return _setsockopt(sockfd, level, optname, optval, optlen);
+}
+
+int getsockopt(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) {
+    printf("CLIENT CALLED: getsockopt; sockf=%d, level=%d, optname=%d, optval=%p, optlen=%d\n", sockfd, level, optname, optval, optlen);
+    printf("OPTLEN = %02x, Optval =%p\n", (uint8_t*)optlen[0], optval);
+    if(isFdUsed(sockfd)) {
+        if(level == 6) {
+            optval = 1;
+            *optlen = 4;
+            return 0;
+        }
+        if(level == 1) {
+            // struct socket *currSocket = getSocketByFd(sockfd);
+            // optval = (void *restrict) 113;
+            // optval = 113;
+            // *optlen =  sizeof(optval);
+            // printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
+            return 0;
+        }
+    }
+    int result = _getsockopt(sockfd, level, optname, optval, optlen);
+    if(optlen == NULL) {
+        printf("NUULLLLLLLL\n");
+    }
+    optval = 113;
+    optlen[0]= 1214141;
+    printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
+    // return _getsockopt(sockfd, level, optname, optval, optlen);
+    return result;
+}
+
+ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) {
+    printf("CLIENT CALLED: sendto; fd=%d\n", sockfd);
+    return _sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+}
+
+ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) {
+    printf("CLIENT CALLED: recvfrom; fd=%d\n", sockfd);
+    return _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+}
+
+int fcntl(int fd, int cmd, ...) {
+    printf("CLIENT CALLED: fcntl; fd=%d, command=%d\n", fd, cmd);
+    return _fcntl(fd, cmd);
+}
+
+int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
+    printf("CLIENT CALLED: getpeername; sock=%d\n", sockfd);
+    return _getpeername(sockfd, addr, addrlen);
+}
+
 void _function_override_init()
 {
     __start_main = dlsym(RTLD_NEXT, "__libc_start_main");
@@ -174,4 +242,12 @@ void _function_override_init()
     _send = dlsym(RTLD_NEXT, "send");
     _recv = dlsym(RTLD_NEXT, "recv");
     _close = dlsym(RTLD_NEXT, "close");
+    _setsockopt = dlsym(RTLD_NEXT, "setsockopt");
+    _getsockopt = dlsym(RTLD_NEXT, "getsockopt");
+    _sendto = dlsym(RTLD_NEXT, "sendto");
+    _recvfrom = dlsym(RTLD_NEXT, "recvfrom");
+    _fcntl = dlsym(RTLD_NEXT, "fcntl");
+    _getpeername = dlsym(RTLD_NEXT, "getpeername");
+    
+
 }

@@ -23,6 +23,7 @@ void icmp_rx(struct subuff *sub)
 {
     //FIXME: implement your ICMP packet processing implementation here
     //figure out various type of ICMP packets, and implement the ECHO response type (icmp_reply)
+    printf("HEELO THERE ICMP\n");
     free_sub(sub);
 }
 
