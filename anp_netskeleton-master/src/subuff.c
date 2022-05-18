@@ -58,6 +58,7 @@ struct subuff *alloc_sub(unsigned int size)
     sub->head = sub->data;
     sub->end = sub->data + size;
     sub->refcnt = 0;
+    sub->read = 0;
     list_init(&sub->list);
     return sub;
 }

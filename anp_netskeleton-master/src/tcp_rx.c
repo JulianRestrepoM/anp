@@ -54,12 +54,24 @@ int handleAck(struct subuff *sub) {
 }
 
 int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct tcpHdr *hdr) {
-    
     setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
 
     pthread_mutex_lock(&incomingConnection->connectionLock);
     sub_queue_tail(incomingConnection->recvPkts, sub);
     pthread_mutex_unlock(&incomingConnection->connectionLock);
+
+    uint32_t lastSeq = getLastRecvSeq(incomingConnection);
+    printf("ACK Is = %d\n", lastSeq);
+
+    // pthread_mutex_lock(&incomingConnection->connectionLock);
+    int ret = sendAck(incomingConnection, lastSeq);
+                if(ret < 0) {
+                    printf("failed to send ACK\n");
+                    return -1;
+                }
+
+    // pthread_mutex_unlock(&incomingConnection->connectionLock);
+   
     return 0;
 }
 

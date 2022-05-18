@@ -31,6 +31,7 @@ struct subuff {
     struct rtentry *rt;
     struct anp_netdev *dev;
     int refcnt;
+    int read;
     uint16_t protocol;
     uint32_t len;
     uint32_t dlen;

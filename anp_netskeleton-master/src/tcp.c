@@ -164,6 +164,7 @@ int doTcpHandshake(struct connection *connection) {
     waitForSynAck(connection);
     if(getState(connection) != SYN_SENT) {
         printf("error: Synack timeout\n");
+        return -1;
     }
 
     int ackCode = sendAck(connection, getLastRecvSeq(connection) + 1);
@@ -205,24 +206,29 @@ int doTcpClose(struct connection *connection) {
     return 0;
 }
 
-int getData(struct connection *connection, void *buf, size_t len) {
+int getData(struct connection *connection, void *buf, size_t len) { //TODO: i think im clearing the buffer while there is still data i need to read in. since wget calls small reads at a time
     size_t lenRecv = 0;
     struct subuff *current;
     struct iphdr *ipHdr;
     size_t currentSize;
+    int loop = 0;
 
     while(lenRecv < len) {
+        
         pthread_mutex_lock(&connection->connectionLock);
         if(!sub_queue_empty(connection->recvPkts)) {
-            while(!sub_queue_empty(connection->recvPkts)) {
-                current = sub_dequeue(connection->recvPkts);
+            while(!sub_queue_empty(connection->recvPkts) && lenRecv < len) {
+                printf("LOOP = %d\n", loop);
+                loop++;
+                current = sub_peek(connection->recvPkts);
                 pthread_mutex_unlock(&connection->connectionLock);
                 ipHdr = IP_HDR_FROM_SUB(current);
 
                 //TODO: it seems to only save max 536 at a time. and overwrites first half of packet larger
-                currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
-                void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN;
+                currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN - current->read;
+                void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN + current->read;
                 void *dest = buf + lenRecv;
+                 
                 
                 if((currentSize + lenRecv) > len ) {
                     currentSize = len -lenRecv;
@@ -233,14 +239,21 @@ int getData(struct connection *connection, void *buf, size_t len) {
                     memcpy(dest, src, currentSize);
                     lenRecv += currentSize;
                 }
-                
-                int ret = sendAck(connection, getLastRecvSeq(connection) + currentSize);
-                setLastRecvSeqNum(connection, getLastRecvSeq(connection) + currentSize);
-                if(ret < 0) {
-                    printf("failed to send ACK\n");
-                    return -1;
+                printf("len = %d, currsize=%d\n", current->len, currentSize);
+                if(current->len >= currentSize) {
+                    sub_dequeue(connection->recvPkts);
+                    free_sub(current);
+                    printf("freed those sluts\n");
                 }
-                free_sub(current);
+                else {
+                    int read = current->read;
+                    printf("OLD read = %d\n", current->read);
+                    // current->read += currentSize;
+                    read += currentSize;
+                    current->read = read;
+                    printf("NEW read = %d\n", current->read);
+                }
+                    
             }
         }
         else {

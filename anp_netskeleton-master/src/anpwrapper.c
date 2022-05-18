@@ -43,6 +43,8 @@ static ssize_t (*_sendto)(int sockfd, const void *buf, size_t len, int flags, co
 static ssize_t (*_recvfrom)(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) = NULL;
 static int (*_fcntl)(int fd, int cmd, ...) = NULL;
 static int (*_getpeername)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
+static ssize_t (*_write)(int fd, const void *buf, size_t count) = NULL;
+static ssize_t (*_read)(int fd, void *buf, size_t count) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
@@ -136,7 +138,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 
 ssize_t recv (int sockfd, void *buf, size_t len, int flags){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
-    printf("CLIENT CALLED: recv: sockfd%d\n", sockfd);
+    printf("CLIENT CALLED: recv: sockfd%d, len=%d\n", sockfd, len);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         //TODO: implement your logic here
@@ -187,7 +189,7 @@ int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t
 
 int getsockopt(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) {
     printf("CLIENT CALLED: getsockopt; sockf=%d, level=%d, optname=%d, optval=%p, optlen=%d\n", sockfd, level, optname, optval, optlen);
-    printf("OPTLEN = %02x, Optval =%p\n", (uint8_t*)optlen[0], optval);
+    // printf("OPTLEN = %02x, Optval =%p\n", (uint8_t*)optlen[0], optval);
     if(isFdUsed(sockfd)) {
         if(level == 6) {
             optval = 1;
@@ -207,9 +209,9 @@ int getsockopt(int sockfd, int level, int optname, void *restrict optval, sockle
     if(optlen == NULL) {
         printf("NUULLLLLLLL\n");
     }
-    optval = 113;
-    optlen[0]= 1214141;
-    printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
+    // optval = 113;
+    // optlen[0]= 1214141;
+    // printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
     // return _getsockopt(sockfd, level, optname, optval, optlen);
     return result;
 }
@@ -234,6 +236,24 @@ int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict
     return _getpeername(sockfd, addr, addrlen);
 }
 
+ssize_t write(int fd, const void*buf, size_t count) {
+    // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+    if(isFdUsed(fd)) {
+        printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+        return send(fd, buf, count, 0);
+    }
+    return _write(fd, buf, count);
+}
+
+ssize_t read(int fd, void *buf, size_t count) {
+    // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+    if(isFdUsed(fd)) {
+        printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+        return recv(fd, buf, count, 0);
+    }
+    return _read(fd, buf, count);
+}
+
 void _function_override_init()
 {
     __start_main = dlsym(RTLD_NEXT, "__libc_start_main");
@@ -248,6 +268,7 @@ void _function_override_init()
     _recvfrom = dlsym(RTLD_NEXT, "recvfrom");
     _fcntl = dlsym(RTLD_NEXT, "fcntl");
     _getpeername = dlsym(RTLD_NEXT, "getpeername");
-    
+    _write = dlsym(RTLD_NEXT, "write");
+    _read = dlsym(RTLD_NEXT, "read");
 
 }
