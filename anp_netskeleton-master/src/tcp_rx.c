@@ -54,7 +54,11 @@ int handleAck(struct subuff *sub) {
 }
 
 int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct tcpHdr *hdr) {
-    setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
+    struct iphdr *ipHdr = IP_HDR_FROM_SUB(sub);
+    size_t currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
+    
+    setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum) + currentSize);
+    printf("received seq num = %d\n", ntohl(hdr->tcpSeqNum));
 
     pthread_mutex_lock(&incomingConnection->connectionLock);
     sub_queue_tail(incomingConnection->recvPkts, sub);
