@@ -114,6 +114,15 @@ int handleFinAck(struct subuff *sub) {
 
     if(incomingConnection == NULL) {
         //TODO:: Im not taking into account of the server initializing the F flag
+        if((incomingConnection = findConnectionBySeqNum(ackNum)) != NULL) {
+            printf("SERVER CLOSING\n");
+            setState(incomingConnection, CLOSE_WAIT);
+            // sendAck(incomingConnection, getLastRecvSeq(incomingConnection) + 1);
+            sendFin(incomingConnection);
+            setState(incomingConnection, LAST_ACK);
+            free_sub(sub);
+            return 0;
+        }
         printf("THIS ONE 2\n"); 
         printf("Connection not found, invalid ACK\n");
         goto dropPkt;

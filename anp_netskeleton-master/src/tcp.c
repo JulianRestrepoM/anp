@@ -179,31 +179,37 @@ int doTcpHandshake(struct connection *connection) {
 }
 
 int doTcpClose(struct connection *connection) {
-    if(getState(connection) != ESTABLISHED) {
+    int currState = getState(connection);
+    if(currState == ESTABLISHED) {
+        int ret = sendFin(connection);
+        if(ret < 0) {
+            printf("sending fin failed\n");
+            return ret;
+        }
+        setState(connection, FIN_WAIT_1);
+        ret = waitForFinACk(connection);
+        if (ret < 0) {
+            return ret;
+        }   
+        setState(connection, FIN_WAIT_2);
+        setState(connection, TIME_WAIT);
+
+        ret = sendAck(connection, getLastRecvSeq(connection) + 1);
+        if(ret < 0 ) {
+            printf("ack failed to send\n");
+            return ret;
+        }
+        setState(connection, CLOSED);
+        return 0;
+    }
+    else if(currState == CLOSE_WAIT) {
+        // set
+    }
+    else {
         printf("Connection not established\n");
         return -1;
     }
-
-    int ret = sendFin(connection);
-    if(ret < 0) {
-        printf("sending fin failed\n");
-        return ret;
-    }
-    setState(connection, FIN_WAIT_1);
-    ret = waitForFinACk(connection);
-    if (ret < 0) {
-        return ret;
-    }
-    setState(connection, FIN_WAIT_2);
-    setState(connection, TIME_WAIT);
-
-    ret = sendAck(connection, getLastRecvSeq(connection) + 1);
-    if(ret < 0 ) {
-        printf("ack failed to send\n");
-        return ret;
-    }
-    setState(connection, CLOSED);
-    return 0;
+   
 }
 
 int getData(struct connection *connection, void *buf, size_t len) { //TODO: i think im clearing the buffer while there is still data i need to read in. since wget calls small reads at a time

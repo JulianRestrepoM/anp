@@ -29,9 +29,9 @@ int sendAck(struct connection *connection, uint32_t ackNum) {
 
 int sendFin(struct connection *connection) {
 
-    if(getState(connection) != ESTABLISHED) {
-        setSeqNum(connection, getSeqNum(connection) + 1);
-    }
+    // if(getState(connection) != ESTABLISHED) {
+    //     setSeqNum(connection, getSeqNum(connection) + 1);
+    // }
 
     struct subuff *sub = makeFinSub(connection);
     int ipOutRes = ip_output(connection->sock->dstaddr, sub);

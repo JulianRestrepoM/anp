@@ -45,6 +45,7 @@ static int (*_fcntl)(int fd, int cmd, ...) = NULL;
 static int (*_getpeername)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 static ssize_t (*_write)(int fd, const void *buf, size_t count) = NULL;
 static ssize_t (*_read)(int fd, void *buf, size_t count) = NULL;
+static int (*_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
@@ -254,6 +255,20 @@ ssize_t read(int fd, void *buf, size_t count) {
     return _read(fd, buf, count);
 }
 
+int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
+    printf("CLIENT CALLED: select;\n ");
+    if(writefds != NULL && FD_ISSET(501,writefds)) {
+        printf("ANP SELECT WRITE\n");
+        return 1;
+    }
+    else if(readfds != NULL && FD_ISSET(501, readfds)) {
+        printf("ANP SELECT READ");
+        return 1;
+    }
+
+    return _select(nfds, readfds, writefds, exceptfds, timeout);
+}
+
 void _function_override_init()
 {
     __start_main = dlsym(RTLD_NEXT, "__libc_start_main");
@@ -270,5 +285,6 @@ void _function_override_init()
     _getpeername = dlsym(RTLD_NEXT, "getpeername");
     _write = dlsym(RTLD_NEXT, "write");
     _read = dlsym(RTLD_NEXT, "read");
+    _select = dlsym(RTLD_NEXT, "select");
 
 }
