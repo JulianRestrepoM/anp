@@ -46,6 +46,7 @@ static int (*_getpeername)(int sockfd, struct sockaddr *restrict addr, socklen_t
 static ssize_t (*_write)(int fd, const void *buf, size_t count) = NULL;
 static ssize_t (*_read)(int fd, void *buf, size_t count) = NULL;
 static int (*_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) = NULL;
+static int (*_bind)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
@@ -68,7 +69,7 @@ int socket(int domain, int type, int protocol) {
     if (is_socket_supported(domain, type, protocol)) {
         //TODO: implement your logic here
         struct socket *newSocket = createSocket(domain, type, protocol);
-        printf("ANP SOCKET %d\n", newSocket->fd);
+        // printf("ANP SOCKET %d\n", newSocket->fd);
         return newSocket->fd;
     }
     // if this is not what anpnetstack support, let it go, let it go!
@@ -154,6 +155,7 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
         }
         setReadyToRecv(connection, true);
         int ret = getData(connection, buf, len);
+        // printf("RECEIVED = %d\n", ret);
         setReadyToRecv(connection, false);
         return ret;
     }
@@ -180,16 +182,16 @@ int close (int sockfd){
 }
 
 int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen) {
-    printf("CLIENT CALLED: setsockopt; sockf=%d, level=%d, optname=%d, optval=%p, oplen=%d\n", sockfd, level, optname, optval, optlen);
+    printf("CLIENT CALLED: setsockopt; sockf=%d\n", sockfd);
     if(isFdUsed(sockfd)) {
-        printf("HELLO???\n");
+        // printf("HELLO???\n");
         return 0;
     }
     return _setsockopt(sockfd, level, optname, optval, optlen);
 }
 
 int getsockopt(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) {
-    printf("CLIENT CALLED: getsockopt; sockf=%d, level=%d, optname=%d, optval=%p, optlen=%d\n", sockfd, level, optname, optval, optlen);
+    printf("CLIENT CALLED: getsockopt; sockf=%d\n", sockfd);
     // printf("OPTLEN = %02x, Optval =%p\n", (uint8_t*)optlen[0], optval);
     if(isFdUsed(sockfd)) {
         if(level == 6) {
@@ -207,9 +209,6 @@ int getsockopt(int sockfd, int level, int optname, void *restrict optval, sockle
         }
     }
     int result = _getsockopt(sockfd, level, optname, optval, optlen);
-    if(optlen == NULL) {
-        printf("NUULLLLLLLL\n");
-    }
     // optval = 113;
     // optlen[0]= 1214141;
     // printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
@@ -238,7 +237,7 @@ int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict
 }
 
 ssize_t write(int fd, const void*buf, size_t count) {
-    // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+    printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
         printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
         return send(fd, buf, count, 0);
@@ -247,7 +246,7 @@ ssize_t write(int fd, const void*buf, size_t count) {
 }
 
 ssize_t read(int fd, void *buf, size_t count) {
-    // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+    printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
         printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
         return recv(fd, buf, count, 0);
@@ -257,16 +256,40 @@ ssize_t read(int fd, void *buf, size_t count) {
 
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
     printf("CLIENT CALLED: select;\n ");
-    if(writefds != NULL && FD_ISSET(501,writefds)) {
-        printf("ANP SELECT WRITE\n");
-        return 1;
-    }
-    else if(readfds != NULL && FD_ISSET(501, readfds)) {
-        printf("ANP SELECT READ");
+    // if(writefds != NULL && FD_ISSET(501,writefds)) {
+    //     printf("ANP SELECT WRITE\n");
+    //     return 1;
+    // }
+    // else if(readfds != NULL && FD_ISSET(501, readfds)) {
+    //     printf("ANP SELECT READ\n");
+    //     return 1;
+    // }
+    if(nfds > ANP_SOCKET_MIN_VAL) {
+        printf("ANP SELECT\n");
+        // sleep(0.1)
+        if(readfds != NULL && FD_ISSET(ANP_SOCKET_MIN_VAL + 1, readfds)) {
+            printf("ANP SELECT READ\n");
+            struct connection *connection = findConnectionByFd(ANP_SOCKET_MIN_VAL + 1);
+            while(sub_queue_empty(connection->recvPkts)) {
+                printf("SELECT SLEEPING\n");
+                sleep(0.5);
+            } 
+        }
         return 1;
     }
 
     return _select(nfds, readfds, writefds, exceptfds, timeout);
+}
+
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    printf("CLIENT CALLED: bind;\n ");
+    if(isFdUsed(sockfd)) {
+        printf("ANP BIND\n");
+        return 0;
+    }
+
+
+    return _bind(sockfd, addr, addrlen);
 }
 
 void _function_override_init()
@@ -286,5 +309,6 @@ void _function_override_init()
     _write = dlsym(RTLD_NEXT, "write");
     _read = dlsym(RTLD_NEXT, "read");
     _select = dlsym(RTLD_NEXT, "select");
+    _bind = dlsym(RTLD_NEXT, "bind");
 
 }

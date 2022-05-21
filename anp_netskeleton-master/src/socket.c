@@ -22,7 +22,7 @@ struct socket *createSocket(int domain, int type, int protocol) {
 
 void initSocketList() {
     sockHead.listHead = (struct list_head *) malloc(sizeof(struct list_head));
-    sockHead.highestFd = 500;
+    sockHead.highestFd = ANP_SOCKET_MIN_VAL;
     list_init(sockHead.listHead);
 }
 

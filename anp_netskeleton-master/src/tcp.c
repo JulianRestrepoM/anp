@@ -167,7 +167,8 @@ int doTcpHandshake(struct connection *connection) {
         return -1;
     }
 
-    int ackCode = sendAck(connection, getLastRecvSeq(connection) + 1);
+    setLastRecvSeqNum(connection, getLastRecvSeq(connection) + 1);
+    int ackCode = sendAck(connection, getLastRecvSeq(connection));
     if(ackCode >= 0) {
         setState(connection, ESTABLISHED);
     }
@@ -202,8 +203,8 @@ int doTcpClose(struct connection *connection) {
         setState(connection, CLOSED);
         return 0;
     }
-    else if(currState == CLOSE_WAIT) {
-        // set
+    else if(currState == LAST_ACK) {
+        return 0;
     }
     else {
         printf("Connection not established\n");
@@ -217,14 +218,62 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
     struct subuff *current;
     struct iphdr *ipHdr;
     size_t currentSize;
-    int loop = 0;
 
     while(lenRecv < len) {
+        
+        // pthread_mutex_lock(&connection->connectionLock);
+        if(!sub_queue_empty(connection->recvPkts)) {
+            while(!sub_queue_empty(connection->recvPkts) && lenRecv < len) {
+                current = sub_peek(connection->recvPkts);
+                // pthread_mutex_unlock(&connection->connectionLock);
+                ipHdr = IP_HDR_FROM_SUB(current);
+
+                //TODO: it seems to only save max 536 at a time. and overwrites first half of packet larger
+                currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN - current->read;
+                void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN + current->read;
+                void *dest = buf + lenRecv;
+                 
+                
+                if((currentSize + lenRecv) > len ) {
+                    currentSize = len -lenRecv;
+                    lenRecv += currentSize;
+                    memcpy(dest, src, currentSize);
+                }
+                else {
+                    memcpy(dest, src, currentSize);
+                    lenRecv += currentSize;
+                }
+                if(current->len >= currentSize) {
+                    sub_dequeue(connection->recvPkts);
+                    free_sub(current);
+                }
+                else {
+                    int read = current->read;
+                    read += currentSize;
+                    current->read = read;
+                }
+                    
+            }
+        }
+        // else {
+        //     pthread_mutex_unlock(&connection->connectionLock);
+        // }
+    }
+    return lenRecv;
+}
+
+int getDataNonBlocking(struct connection *connection, void *buf, size_t len) { //TODO: i think im clearing the buffer while there is still data i need to read in. since wget calls small reads at a time
+    size_t lenRecv = 0;
+    struct subuff *current;
+    struct iphdr *ipHdr;
+    size_t currentSize;
+    int loop = 0;
+
+    if(lenRecv < len) {
         
         pthread_mutex_lock(&connection->connectionLock);
         if(!sub_queue_empty(connection->recvPkts)) {
             while(!sub_queue_empty(connection->recvPkts) && lenRecv < len) {
-                printf("LOOP = %d\n", loop);
                 loop++;
                 current = sub_peek(connection->recvPkts);
                 pthread_mutex_unlock(&connection->connectionLock);
@@ -245,19 +294,14 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                     memcpy(dest, src, currentSize);
                     lenRecv += currentSize;
                 }
-                printf("len = %d, currsize=%d\n", current->len, currentSize);
                 if(current->len >= currentSize) {
                     sub_dequeue(connection->recvPkts);
                     free_sub(current);
-                    printf("freed those sluts\n");
                 }
                 else {
                     int read = current->read;
-                    printf("OLD read = %d\n", current->read);
-                    // current->read += currentSize;
                     read += currentSize;
                     current->read = read;
-                    printf("NEW read = %d\n", current->read);
                 }
                     
             }

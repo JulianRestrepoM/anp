@@ -3,6 +3,8 @@
 #include "linklist.h"
 #include "systems_headers.h"
 
+#define ANP_SOCKET_MIN_VAL 500
+
 
 struct socket {
     struct list_head list;
