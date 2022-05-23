@@ -13,6 +13,7 @@
 #define TIME_WAIT 5
 #define CLOSE_WAIT 6 //TODO: probably have to set the proper states when server initiantes CLosing
 #define LAST_ACK 7
+#define PORT_RANGE (60999 - 32768 + 1) + 32768
 
 
 struct connection {
@@ -53,6 +54,7 @@ uint32_t getSeqNum(struct connection *connection);
 uint32_t setSeqNum(struct connection *connection, uint32_t newSeq);
 uint32_t getLastRecvSeq(struct connection *connection);
 uint32_t setLastRecvSeqNum(struct connection *connection, uint32_t newSeq);
+int genRandomPort();
 
 
 

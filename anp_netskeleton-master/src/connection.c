@@ -141,3 +141,9 @@ uint32_t setLastRecvSeqNum(struct connection *connection, uint32_t newSeq) {
     connection->lastRecvSeq = newSeq;
     pthread_mutex_unlock(&connection->connectionLock);
 }
+
+int genRandomPort() {
+    srand(time(0));
+    int portNum = (rand()% PORT_RANGE);
+    return portNum;
+}

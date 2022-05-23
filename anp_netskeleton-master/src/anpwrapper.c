@@ -96,7 +96,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         }
         currSocket->dstaddr = ntohl((uint32_t) sin->sin_addr.s_addr);
         currSocket->dstaddrlen = addrlen;
-        currSocket->srcport = SRC_PORT;
+        currSocket->srcport = genRandomPort();
         currSocket->srcaddr = SRC_ADDR;
         memcpy(&currSocket->dstport, &sin->sin_port, sizeof(sin->sin_port));
 
