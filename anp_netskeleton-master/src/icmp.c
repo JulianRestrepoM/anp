@@ -30,6 +30,7 @@ void icmp_rx(struct subuff *sub)
 void icmp_reply(struct subuff *sub)
 {
     //FIXME: implement your ICMP reply implementation here
+    printf("HEELO THERE ICMP 2\n");
     // preapre an ICMP response buffer
     // send it out on ip_ouput(...)
 }

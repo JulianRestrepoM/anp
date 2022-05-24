@@ -47,6 +47,7 @@ static ssize_t (*_write)(int fd, const void *buf, size_t count) = NULL;
 static ssize_t (*_read)(int fd, void *buf, size_t count) = NULL;
 static int (*_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) = NULL;
 static int (*_bind)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) = NULL;
+static int (*_getsockname)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
@@ -192,21 +193,24 @@ int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t
 
 int getsockopt(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) {
     printf("CLIENT CALLED: getsockopt; sockf=%d\n", sockfd);
-    // printf("OPTLEN = %02x, Optval =%p\n", (uint8_t*)optlen[0], optval);
+    printf("OPTLEN = %02x, Optval =%p\n", (uint8_t*)optlen[0], optval);
     if(isFdUsed(sockfd)) {
-        if(level == 6) {
-            optval = 1;
-            *optlen = 4;
-            return 0;
-        }
-        if(level == 1) {
-            // struct socket *currSocket = getSocketByFd(sockfd);
-            // optval = (void *restrict) 113;
-            // optval = 113;
-            // *optlen =  sizeof(optval);
-            // printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
-            return 0;
-        }
+        // if(level == 6) {
+        //     optval = 1;
+        //     *optlen = 4;
+        //     return 0;
+        // }
+        // if(level == 1) {
+        //     // struct socket *currSocket = getSocketByFd(sockfd);
+        //     // optval = (void *restrict) 113;
+        //     // optval = 113;
+        //     // *optlen =  sizeof(optval);
+        //     // printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
+        //     return 0;
+        // }
+        optval = 1072;
+        optlen = sizeof(1072);
+        return 0;
     }
     int result = _getsockopt(sockfd, level, optname, optval, optlen);
     // optval = 113;
@@ -233,22 +237,43 @@ int fcntl(int fd, int cmd, ...) {
 
 int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
     printf("CLIENT CALLED: getpeername; sock=%d\n", sockfd);
+    if(isFdUsed(sockfd)) {
+        struct socket *currsock = getSocketByFd(sockfd);
+        if(addrlen < currsock->dstaddrlen) {
+            printf("peer address too small");
+        }
+        addr = currsock->dstaddr;
+        return currsock->dstaddrlen;
+    }
+    return _getpeername(sockfd, addr, addrlen);
+}
+
+int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
+    printf("CLIENT CALLED: getsockname; sockfd%d\n", sockfd);
+    if(isFdUsed(sockfd)) {
+        struct socket *currsock = getSocketByFd(sockfd);
+        if(addrlen < sizeof(currsock->srcaddr)) {
+            printf("sockname address too small");
+        }
+        addr = (struct sockaddr *restrict)currsock->srcaddr; //maybe it wants port? not sure
+        return sizeof(currsock->srcaddr);
+    }
     return _getpeername(sockfd, addr, addrlen);
 }
 
 ssize_t write(int fd, const void*buf, size_t count) {
-    printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+    // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+        printf("ANP CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
         return send(fd, buf, count, 0);
     }
     return _write(fd, buf, count);
 }
 
 ssize_t read(int fd, void *buf, size_t count) {
-    printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+    // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+        printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
         return recv(fd, buf, count, 0);
     }
     return _read(fd, buf, count);
@@ -292,6 +317,8 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     return _bind(sockfd, addr, addrlen);
 }
 
+
+
 void _function_override_init()
 {
     __start_main = dlsym(RTLD_NEXT, "__libc_start_main");
@@ -310,5 +337,6 @@ void _function_override_init()
     _read = dlsym(RTLD_NEXT, "read");
     _select = dlsym(RTLD_NEXT, "select");
     _bind = dlsym(RTLD_NEXT, "bind");
+    _getsockname = dlsym(RTLD_NEXT, "getsockname");
 
 }

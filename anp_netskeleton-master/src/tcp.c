@@ -80,7 +80,8 @@ struct subuff *makeAckSub(struct connection *connection, uint32_t ackNum) {
 }
 
 struct subuff *makeFinSub(struct connection *connection) {
-    uint32_t ackNum = getLastRecvSeq(connection) + 1;
+    // uint32_t ackNum = getLastRecvSeq(connection) + 1;
+     uint32_t ackNum = getLastRecvSeq(connection); //todo: this fixed the close with iperf, idk if it broke it with reddit maybe
     struct subuff *sub = allocTcpSub(0);
     setFinOptionsTcpHdr(sub, connection, ackNum);
     return sub;
