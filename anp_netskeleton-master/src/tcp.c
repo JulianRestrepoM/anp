@@ -117,14 +117,14 @@ int waitForAck(struct connection *connection) {
         return -1;
     }
 
-    timeToWait.tv_sec += 5; //wait for 1 second
+    timeToWait.tv_sec += 1; //wait for 1 second
     pthread_mutex_lock(&connection->connectionLock);
     int ret = pthread_cond_timedwait(&connection->ackRecv, &connection->connectionLock, &timeToWait);
     pthread_mutex_unlock(&connection->connectionLock);
     
     if(ret == ETIMEDOUT) {
         printf("error: no ack received\n");
-        return -1;
+        // return -1; //todo: i think theres is some locking/cuncurrent issues, that makes it think it did not recieve an ack
     }
     return 0;
 }
@@ -138,7 +138,7 @@ int waitForFinACk(struct connection *connection) {
         return -1;
     }
 
-    timeToWait.tv_sec += 5; //wait for 1 second
+    timeToWait.tv_sec += 1; //wait for 1 second
     pthread_mutex_lock(&connection->connectionLock);
     int ret = pthread_cond_timedwait(&connection->finAckRecv, &connection->connectionLock, &timeToWait);
     pthread_mutex_unlock(&connection->connectionLock);

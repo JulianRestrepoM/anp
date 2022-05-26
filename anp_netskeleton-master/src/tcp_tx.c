@@ -98,11 +98,13 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
         if(ret < 0) {
             return ret;
         }
-
-        int wait = waitForAck(connection);
-        if(wait == -1) {
-            return wait;
+        if(getWaitingForAck(connection)) {
+            int wait = waitForAck(connection);
+            if(wait == -1) {
+                return wait;
+            }
         }
+        
 
         totalSent += ret;
         free_sub(sending);

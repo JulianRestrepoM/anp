@@ -25,7 +25,6 @@ int handleAck(struct subuff *sub) {
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
     uint32_t ackNum = ntohl(hdr->tcpAckNum);
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum);
-    // printf("GETTING ACK %"PRIu32"\n", ackNum);
 
     if((incomingConnection != NULL) && (getWaitingForAck(incomingConnection) == true)) {
         setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));

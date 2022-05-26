@@ -77,7 +77,7 @@ void arp_rx(struct subuff *skb)
     arphdr->hwtype = ntohs(arphdr->hwtype);
     arphdr->protype = ntohs(arphdr->protype);
     arphdr->opcode = ntohs(arphdr->opcode);
-    debug_arp("in", arphdr);
+    // debug_arp("in", arphdr);
 
     if (arphdr->hwtype != ARP_ETHERNET) {
         printf("Error: not a Ethernet type ARP, how did it end up here?\n");
