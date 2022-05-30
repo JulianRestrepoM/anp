@@ -12,9 +12,13 @@ struct socket {
     int domain;
     int protocol;
     int fd;
+    int backlog;
+    bool isPassive;
+    bool pendingC;
     uint32_t srcaddr;
     uint32_t dstaddr;
     socklen_t dstaddrlen;
+    socklen_t srcaddrlen;
     uint16_t dstport;
     uint16_t srcport;
 

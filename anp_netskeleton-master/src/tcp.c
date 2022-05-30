@@ -117,7 +117,7 @@ int waitForAck(struct connection *connection) {
         return -1;
     }
 
-    timeToWait.tv_sec += 1; //wait for 1 second
+    timeToWait.tv_sec += 5; //wait for 1 second
     pthread_mutex_lock(&connection->connectionLock);
     int ret = pthread_cond_timedwait(&connection->ackRecv, &connection->connectionLock, &timeToWait);
     pthread_mutex_unlock(&connection->connectionLock);

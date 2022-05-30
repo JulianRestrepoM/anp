@@ -19,6 +19,9 @@ int tcpRx(struct subuff *sub) {
     if(hdr->tcpAck == 1) {
         return handleAck(sub);
     }
+    if(hdr->tcpSyn == 1) {
+        printf("GOT SYN\n");
+    }
 }
 
 int handleAck(struct subuff *sub) {

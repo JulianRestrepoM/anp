@@ -27,6 +27,7 @@
 #define IPP_NUM_ICMP     0x01
 #define IPP_NUM_IP_in_IP   0x04 // we are doing IP in IP tunning
 #define IPP_TCP    0x06
+#define IPP_UDP    0x17
 
 #define DEBUG_IP
 #ifdef DEBUG_IP

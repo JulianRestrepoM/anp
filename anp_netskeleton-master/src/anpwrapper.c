@@ -26,6 +26,7 @@
 #include "socket.h"
 #include "connection.h"
 #include "tcp.h"
+#include "udp.h"
 
 static int (*__start_main)(int (*main) (int, char * *, char * *), int argc, \
                            char * * ubp_av, void (*init) (void), void (*fini) (void), \
@@ -48,16 +49,19 @@ static ssize_t (*_read)(int fd, void *buf, size_t count) = NULL;
 static int (*_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) = NULL;
 static int (*_getsockname)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 static int (*_poll)(struct pollfd *fds, nfds_t nfds, int timeout) = NULL;
+static int (*_bind)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) = NULL;
+static int (*_listen)(int sockfds, int backlog) = NULL;
+static int (*_accept)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
     if (domain != AF_INET){
         return 0;
     }
-    if (!(type & SOCK_STREAM)) {
+    if (!(type & SOCK_STREAM) && !(type & SOCK_DGRAM)) {
         return 0;
     }
-    if (protocol != 0 && protocol != IPPROTO_TCP) {
+    if (protocol != 0 && protocol != IPPROTO_TCP && protocol != IPPROTO_UDP) {
         return 0;
     }
     printf("supported socket domain %d type %d and protocol %d \n", domain, type, protocol);
@@ -68,7 +72,7 @@ static int is_socket_supported(int domain, int type, int protocol)
 int socket(int domain, int type, int protocol) {
     printf("CLIENT CALLED: socket: domain=%d, type=%d, protocol=%d\n", domain, type, protocol);
     if (is_socket_supported(domain, type, protocol)) {
-        if(type & SOCK_STREAM) {
+        if((type & SOCK_STREAM) || (type & SOCK_DGRAM)) {
             // TODO: implement your logic here
         struct socket *newSocket = createSocket(domain, type, protocol);
         printf("ANP SOCKET %d\n", newSocket->fd);
@@ -87,7 +91,7 @@ int socket(int domain, int type, int protocol) {
 
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
-    // printf("CLIENT CALLED: connect: sockfd=%d\n", sockfd);
+    printf("CLIENT CALLED: connect: sockfd=%d\n", sockfd);
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
     bool is_anp_sockfd = isFdUsed(sockfd);
     if (is_anp_sockfd)
@@ -109,8 +113,12 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         currSocket->dstaddr = ntohl((uint32_t)sin->sin_addr.s_addr);
         currSocket->dstaddrlen = addrlen;
         currSocket->srcport = genRandomPort();
-        currSocket->srcaddr = SRC_ADDR;
+        // if(currSocket->srcaddr == 0) {
+            currSocket->srcaddr = SRC_ADDR;
+        // }
+        
         memcpy(&currSocket->dstport, &sin->sin_port, sizeof(sin->sin_port));
+        // currSocket->dstport = sin->sin_port; //todo can i do this instead??
 
         struct connection *newConnection = allocConnection();
         addNewConnection(newConnection, currSocket);
@@ -148,11 +156,17 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
         if (connection == NULL) {
             printf("error: Socket not found\n");
         }
-        if (getState(connection) != ESTABLISHED) {
-            printf("error: connection not in ESTABLISHED state\n");
-            return -1;
+        if(connection->sock->type & SOCK_STREAM) {
+            if (getState(connection) != ESTABLISHED) {
+                printf("error: connection not in ESTABLISHED state\n");
+                return -1;
+            }
+            return sendTcpData(connection, buf, len);
         }
-        return sendTcpData(connection, buf, len);
+        else if(connection->sock->type & SOCK_DGRAM) {
+            return sendUdpData(connection, buf, len);
+        }
+        
     }
     // the default path
     return _send(sockfd, buf, len, flags);
@@ -169,15 +183,22 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
         if (connection == NULL) {
             printf("error: Socket not found\n");
         }
-        if (getState(connection) != ESTABLISHED) {
-            printf("error: connection not in ESTABLISHED state\n");
-            return -1;
+        if (connection->sock->type & SOCK_STREAM)
+        {
+            if (getState(connection) != ESTABLISHED)
+            {
+                printf("error: connection not in ESTABLISHED state\n");
+                return -1;
+            }
+            setReadyToRecv(connection, true);
+            int ret = getData(connection, buf, len);
+            // printf("RECEIVED = %d\n", ret);
+            setReadyToRecv(connection, false);
+            return ret;
         }
-        setReadyToRecv(connection, true);
-        int ret = getData(connection, buf, len);
-        // printf("RECEIVED = %d\n", ret);
-        setReadyToRecv(connection, false);
-        return ret;
+        else if(connection->sock->type & SOCK_DGRAM) {
+            return 0;
+        }
     }
     // the default path
     return _recv(sockfd, buf, len, flags);
@@ -188,9 +209,12 @@ int close (int sockfd){
     printf("CLIENT CALLED: close: sockf=%d\n", sockfd);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
+        int ret = 0;
         struct connection *toClose = findConnectionByFd(sockfd);
         struct socket *sock = toClose->sock;
-        int ret = doTcpClose(toClose);
+        if(sock->type == SOCK_STREAM) {
+            ret = doTcpClose(toClose);
+        }
         sockListRemove(sock);
         connectionListRemove(toClose);
 
@@ -253,6 +277,9 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 
 int fcntl(int fd, int cmd, ...) {
     printf("CLIENT CALLED: fcntl; fd=%d, command=%d\n", fd, cmd);
+    if(isFdUsed(fd)) {
+        return 0;
+    }
     return _fcntl(fd, cmd);
 }
 
@@ -281,19 +308,19 @@ int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict
 int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
     printf("CLIENT CALLED: getsockname; sockfd%d\n", sockfd);
     // if(isFdUsed(sockfd)) {
+
     //     struct socket *currsock = getSocketByFd(sockfd);
-    //     if(addrlen < sizeof(currsock->srcaddr)) {
+    //     if(*addrlen < currsock->srcaddrlen) {
     //         printf("sockname address too small");
+    //         // memcpy(&addrlen, &currsock->srcaddrlen, sizeof(currsock->srcaddrlen));
+    //         addrlen = currsock->srcaddrlen; 
     //     }
-    //     // addr = (struct sockaddr *restrict)currsock->srcaddr; //maybe it wants port? not sure
+    //     uint32_t *netAddr = htonl(currsock->srcaddr);
+    //     memcpy(&addr->sa_data, &netAddr, currsock->srcaddrlen);
+    //     // sprintf(addr->sa_data, "%08x", currsock->srcaddr);
+
     //     return 0;
     // }
-    // char x[16];
-    // inet_ntop(AF_INET, addr->sa_data, x, 16);
-    // printf("BEFORE SOCK name address %s\n", x);
-    // int result = _getsockname(sockfd, addr, addrlen);
-    // printf("AFTER  SOCK name address %s\n", x);
-    // return result;
     // return _getsockname(sockfd, addr, addrlen);
     return 0;
 }
@@ -301,7 +328,8 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
 ssize_t write(int fd, const void*buf, size_t count) {
     // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        // printf("ANP CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+        printf("ANP CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+        struct socket *sock = getSocketByFd(fd); 
         return send(fd, buf, count, 0);
     }
     return _write(fd, buf, count);
@@ -310,7 +338,7 @@ ssize_t write(int fd, const void*buf, size_t count) {
 ssize_t read(int fd, void *buf, size_t count) {
     // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        // printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+        printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
         return recv(fd, buf, count, 0);
     }
     return _read(fd, buf, count);
@@ -354,13 +382,56 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
 }
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout) { 
-    // printf("CLIENT CALLED: poll\n");
+    printf("CLIENT CALLED: poll\n");
 
     // int result = _poll(fds, nfds, timeout);
     // printf("POLL Return %d\n", result);
     // return result;
 
     return _poll(fds, nfds, timeout);
+}
+
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    printf("CLIENT CALLED: bind; sock%d\n", sockfd);
+    if(isFdUsed(sockfd)) {
+        struct socket *sock = getSocketByFd(sockfd);
+        struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+        sock->srcaddr = ((uint32_t)sin->sin_addr.s_addr); //TODO: maybe i need to use memcpy
+        sock->srcaddrlen = addrlen;
+        sock->srcport = ntohs(sin->sin_port);
+        printf("BIND PORT %d\n", sock->srcport);
+        char *ip = inet_ntoa(sin->sin_addr);
+        printf("ADDRESS = %s\n", ip);
+        return 0;
+    }
+    struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+    char *ip = inet_ntoa(sin->sin_addr);
+    printf("ADDRESS = %s\n", ip);
+    return _bind(sockfd, addr, addrlen);
+}
+
+int listen(int sockfd, int backlog) {
+    printf("CLIENT CALLED: listen; sock%d\n", sockfd);
+    if(isFdUsed(sockfd)) { 
+        struct socket *sock = getSocketByFd(sockfd);
+        sock->backlog = backlog;
+        sock->isPassive = true;
+        return 0;
+    }
+    return _listen(sockfd, backlog);
+}
+
+int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
+    printf("CLIENT CALLED: accept\n");
+    if(isFdUsed(sockfd)) {
+        struct socket *sock = getSocketByFd(sockfd);
+        while(!sock->pendingC) {
+
+        }
+        return socket(sock->domain, sock->type, sock->protocol);
+    }
+
+    return _accept(sockfd, addr, addrlen);
 }
 
 
@@ -383,6 +454,10 @@ void _function_override_init()
     _read = dlsym(RTLD_NEXT, "read");
     _select = dlsym(RTLD_NEXT, "select");
     _getsockname = dlsym(RTLD_NEXT, "getsockname");
-    _poll = dlsym(RTLD_NEXT, "poll");
+   void *hndpoll = dlopen("libc.so.6",RTLD_LAZY);
+    _poll = dlsym(hndpoll, "poll");
+    _bind = dlsym(RTLD_NEXT, "bind");
+    _listen = dlsym(RTLD_NEXT, "listen");
+    _accept = dlsym(RTLD_NEXT, "accept");
 
 }

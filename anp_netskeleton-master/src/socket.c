@@ -14,6 +14,8 @@ struct socket *createSocket(int domain, int type, int protocol) {
     newSocket->type = type;
     newSocket->protocol = protocol;
     newSocket->fd = sockHead.highestFd;
+    newSocket->srcaddr = 0;
+    newSocket->pendingC = false;
 
     sockListAdd(newSocket);
 
