@@ -58,10 +58,10 @@ static int is_socket_supported(int domain, int type, int protocol)
     if (domain != AF_INET){
         return 0;
     }
-    if (!(type & SOCK_STREAM) && !(type & SOCK_DGRAM)) {
+    if (!(type & SOCK_STREAM)) {
         return 0;
     }
-    if (protocol != 0 && protocol != IPPROTO_TCP && protocol != IPPROTO_UDP) {
+    if (protocol != 0 && protocol != IPPROTO_TCP) {
         return 0;
     }
     printf("supported socket domain %d type %d and protocol %d \n", domain, type, protocol);
@@ -328,7 +328,7 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
 ssize_t write(int fd, const void*buf, size_t count) {
     // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        printf("ANP CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+        // printf("ANP CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
         struct socket *sock = getSocketByFd(fd); 
         return send(fd, buf, count, 0);
     }
@@ -338,7 +338,7 @@ ssize_t write(int fd, const void*buf, size_t count) {
 ssize_t read(int fd, void *buf, size_t count) {
     // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+        // printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
         return recv(fd, buf, count, 0);
     }
     return _read(fd, buf, count);
@@ -346,34 +346,26 @@ ssize_t read(int fd, void *buf, size_t count) {
 
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
     // printf("CLIENT CALLED: select;\n ");
-    // if(writefds != NULL && FD_ISSET(501,writefds)) {
-    //     printf("ANP SELECT WRITE\n");
-    //     return 1;
-    // }
-    // else if(readfds != NULL && FD_ISSET(501, readfds)) {
-    //     printf("ANP SELECT READ\n");
-    //     return 1;
-    // }
-    // if(nfds > ANP_SOCKET_MIN_VAL) {
-    //     // printf("ANP SELECT\n");
-    //     // sleep(0.1)
-    //     if(readfds != NULL) {
-    //         // printf("ANP SELECT READ\n");
-    //         struct connection *connection = findConnectionByFd(sockHead.highestFd);
-    //         if(!sub_queue_empty(connection->recvPkts)) {
-    //             return 1;
-    //         }
-    //         if(sub_queue_empty(connection->recvPkts)) {
-    //             printf("SELECT SLEEPING\n");
-    //             usleep(timeout->tv_usec);
-    //         } 
-    //         if(sub_queue_empty(connection->recvPkts)) {
-    //             return 0;
-    //         }
-    //     }
-    //     printf("ANP SELECT WRITE\n");
-    //     return 1;
-    // }
+    if(nfds > ANP_SOCKET_MIN_VAL) {
+        // printf("ANP SELECT\n");
+        // sleep(0.1)
+        if(readfds != NULL) {
+            // printf("ANP SELECT READ\n");
+            struct connection *connection = findConnectionByFd(sockHead.highestFd);
+            if(!sub_queue_empty(connection->recvPkts)) {
+                return 1;
+            }
+            if(sub_queue_empty(connection->recvPkts)) {
+                printf("SELECT SLEEPING\n");
+                usleep(timeout->tv_usec);
+            } 
+            if(sub_queue_empty(connection->recvPkts)) {
+                return 0;
+            }
+        }
+        printf("ANP SELECT WRITE\n");
+        return 1;
+    }
     // int result = _select(nfds, readfds, writefds, exceptfds, timeout);
     // printf("SELECT RESULT %d\n", result);
     // return result;
@@ -402,6 +394,15 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
         printf("BIND PORT %d\n", sock->srcport);
         char *ip = inet_ntoa(sin->sin_addr);
         printf("ADDRESS = %s\n", ip);
+
+        //create a connection struct for the server
+        if (connectionHead.connectionListHead == NULL) 
+        {
+            initConnectionList();
+        }
+        struct connection *newConnection = allocConnection();
+        addNewConnection(newConnection, sock);
+
         return 0;
     }
     struct sockaddr_in *sin = (struct sockaddr_in *)addr;
@@ -413,9 +414,10 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 int listen(int sockfd, int backlog) {
     printf("CLIENT CALLED: listen; sock%d\n", sockfd);
     if(isFdUsed(sockfd)) { 
-        struct socket *sock = getSocketByFd(sockfd);
-        sock->backlog = backlog;
-        sock->isPassive = true;
+        struct connection *connection = findConnectionByFd(sockfd);
+        connection->sock->backlog = backlog;
+        connection->sock->isPassive = true;
+        setState(connection, LISTEN);
         return 0;
     }
     return _listen(sockfd, backlog);

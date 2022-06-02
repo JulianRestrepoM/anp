@@ -12,6 +12,21 @@ struct connection* allocConnection() {
     return newConnection;
 }
 
+struct connection* findConnectionbyPort(uint16_t port)  {
+    struct list_head *item;
+    struct connection *entry;
+    list_for_each(item, connectionHead.connectionListHead) {
+        entry = list_entry(item, struct connection, list);
+        pthread_mutex_lock(&entry->connectionLock);
+        if (entry->sock->srcport == ntohs(port)) {
+            pthread_mutex_unlock(&entry->connectionLock);
+            return entry;
+        }
+        pthread_mutex_unlock(&entry->connectionLock);
+    }
+    return NULL;
+}
+
 struct connection* findConnectionByFd(int fd) {
     struct list_head *item;
     struct connection *entry;

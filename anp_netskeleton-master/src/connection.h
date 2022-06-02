@@ -13,7 +13,8 @@
 #define TIME_WAIT 5
 #define CLOSE_WAIT 6 //TODO: probably have to set the proper states when server initiantes CLosing
 #define LAST_ACK 7
-#define PORT_RANGE (60999 - 32768 + 1) + 32768
+#define LISTEN 8
+#define PORT_RANGE (60999 - 32768 + 1) + 32768 //empirical ports
 
 
 struct connection {
@@ -44,6 +45,7 @@ void connectionListAdd(struct connection *newConnection);
 void connectionListRemove(struct connection *newConnection);
 struct connection* findConnectionBySeqNum(uint32_t num);
 struct connection* findConnectionByFd(int fd);
+struct connection* findConnectionbyPort(uint16_t port);
 void addNewConnection(struct connection *newConnection, struct socket *sock);
 int setState(struct connection *connection, int state);
 int getState(struct connection *connection);

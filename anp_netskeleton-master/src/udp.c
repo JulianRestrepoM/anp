@@ -32,7 +32,7 @@ struct subuff_head *dataSplitUdp(struct connection *connection, const void *buf,
         hdrToSend->destinationPort = connection->sock->dstport;
         hdrToSend->checksum = 0;
         hdrToSend->length =htons(UDP_HDR_LEN + lenToSend); // make sure this means what i mean it means
-        // hdrToSend->checksum = do_tcp_csum((uint8_t*)hdrToSend, UDP_HDR_LEN + lenToSend, IPPROTO_UDP, connection->sock->srcaddr, connection->sock->dstaddr); //make sure this is right
+        hdrToSend->checksum = do_tcp_csum((uint8_t*)hdrToSend, UDP_HDR_LEN + lenToSend, IPPROTO_UDP, connection->sock->srcaddr, connection->sock->dstaddr); //make sure this is right
         lastSentPtr += lenToSend;
 
         if((len - lastSentPtr) > maxSendLen) {
@@ -53,20 +53,23 @@ int sendUdpData(struct connection *connection, const void *buf, size_t len) {
 
     while(sub_queue_empty(subsToSend) == 0) {
         sending = sub_dequeue(subsToSend);
+        struct subuff sendingCpy = *sending;
         ret = ip_output(connection->sock->dstaddr, sending);
         if(ret < 0) {
+            printf("ERROR: failed udp send\n");
             for(int i = 0; i < 2; i++) {
                 sleep(1);
+                *sending = sendingCpy;
                 ret = ip_output(connection->sock->dstaddr, sending);
                 if(ret >= 0) {
-                    break;
+                    goto subSent;
                 }
             }
             printf("ERROR: failed udp send\n");
             return ret;
         }
     
-
+        subSent:
         totalSent += ret;
         free_sub(sending);
     }
@@ -74,6 +77,6 @@ int sendUdpData(struct connection *connection, const void *buf, size_t len) {
 }
 
 int udpRx(struct subuff *sub) {
-    printf("Recived UDP packet\n");
+    // printf("Recived UDP packet\n");
     return 0;
 }

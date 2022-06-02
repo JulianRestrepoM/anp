@@ -21,13 +21,27 @@ int tcpRx(struct subuff *sub) {
     }
     if(hdr->tcpSyn == 1) {
         printf("GOT SYN\n");
+        handleSyn(sub);
     }
+}
+
+int handleSyn(struct subuff *sub) {
+    struct tcpHdr *hdr = tcpHdrFromSub(sub);
+    struct connection *connection = findConnectionbyPort(hdr->tcpDest);
+    if(connection == NULL) {
+        printf("ERROR: handleSyn did not find connection");
+        return -1;
+    }
+    printf("FOUND IT\n");
+
+    return 0;
 }
 
 int handleAck(struct subuff *sub) {
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
     uint32_t ackNum = ntohl(hdr->tcpAckNum);
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum);
+
 
     if((incomingConnection != NULL) && (getWaitingForAck(incomingConnection) == true)) {
         setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
@@ -44,6 +58,11 @@ int handleAck(struct subuff *sub) {
             return handleFinAck(sub);
         }
         printf("ITS HEREEEEE\n");
+        incomingConnection = findConnectionbyPort((hdr->tcpDest)); //fixes some packages getting dropped accidnetly because it could not find by seqnum. 
+        if(incomingConnection != NULL) {
+            printf("SAVED\n");
+            return handleRecv(incomingConnection, sub, hdr);
+        }
         printf("error: could not find connection\n");
         goto dropPkt;
     }

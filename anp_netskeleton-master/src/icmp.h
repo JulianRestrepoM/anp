@@ -20,6 +20,8 @@
 
 #include "systems_headers.h"
 #include "subuff.h"
+#include "ethernet.h"
+#include "ip.h"
 
 //https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml
 
@@ -36,5 +38,10 @@ struct icmp {
 
 void icmp_rx(struct subuff *sub);
 void icmp_reply(struct subuff *sub);
+
+static inline struct icmp *icmp_hdr(struct subuff *sub)
+{
+    return (struct icmp *)(sub->head + ETH_HDR_LEN + IP_HDR_LEN);
+}
 
 #endif //ANPNETSTACK_ICMP_H

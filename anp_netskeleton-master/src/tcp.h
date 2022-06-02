@@ -42,6 +42,7 @@ void setAckOptionsTcpHdr(struct subuff *sub, struct connection *connection, uint
 int tcpRx(struct subuff *sub);
 int handleSynAck(struct subuff *sub);
 int handleAck(struct subuff *sub);
+int handleSyn(struct subuff *sub);
 int sendAck(struct connection *connection, uint32_t ackNum);
 struct subuff *makeAckSub(struct connection *connection, uint32_t ackNum);
 int sendTcpData(struct connection *connection, const void *buf, size_t len);

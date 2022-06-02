@@ -23,14 +23,44 @@ void icmp_rx(struct subuff *sub)
 {
     //FIXME: implement your ICMP packet processing implementation here
     //figure out various type of ICMP packets, and implement the ECHO response type (icmp_reply)
-    printf("HEELO THERE ICMP\n");
+    struct icmp* icmpHeader = icmp_hdr(sub);
+    struct iphdr* ih = IP_HDR_FROM_SUB(sub);
+
+    uint16_t ogPacketCsum = icmpHeader->checksum;
+    icmpHeader->checksum = 0;
+
+    uint16_t csum = do_csum(icmpHeader, IP_PAYLOAD_LEN(ih), 0);
+
+    if (icmpHeader->type != ICMP_V4_ECHO) {
+        printf("Non-echo request, got %hx, code value %hx dropping packet\n", icmpHeader->type, icmpHeader->code);
+        goto drop_pkt;
+    }
+
+    if (csum != ogPacketCsum){
+        printf("Error, invalid ICMP checksum, dropping\n");
+        goto drop_pkt;
+    }
+    icmp_reply(sub);
+
+    drop_pkt:
     free_sub(sub);
 }
 
 void icmp_reply(struct subuff *sub)
 {
     //FIXME: implement your ICMP reply implementation here
-    printf("HEELO THERE ICMP 2\n");
-    // preapre an ICMP response buffer
-    // send it out on ip_ouput(...)
+    struct iphdr *ih = IP_HDR_FROM_SUB(sub);
+    struct icmp *icmpHeader = icmp_hdr(sub);
+
+    sub_reserve(sub, IP_PAYLOAD_LEN(ih) + ETH_HDR_LEN + IP_HDR_LEN);
+    sub_push(sub, IP_PAYLOAD_LEN(ih));
+
+    icmpHeader->type = ICMP_V4_REPLY;
+    icmpHeader->code = 0;
+    icmpHeader->checksum = 0;
+    sub->protocol = IPP_NUM_ICMP;
+
+    icmpHeader->checksum = do_csum(icmpHeader, IP_PAYLOAD_LEN(ih), 0);
+
+    ip_output(ih->saddr, sub);
 }
