@@ -59,7 +59,8 @@ int handleAck(struct subuff *sub) {
         }
         printf("ITS HEREEEEE\n");
         incomingConnection = findConnectionbyPort((hdr->tcpDest)); //fixes some packages getting dropped accidnetly because it could not find by seqnum. 
-        if(incomingConnection != NULL) {
+        
+        if(incomingConnection != NULL && (getLastRecvSeq(incomingConnection) == ntohl(hdr->tcpSeqNum))) {
             printf("SAVED\n");
             return handleRecv(incomingConnection, sub, hdr);
         }
@@ -67,7 +68,10 @@ int handleAck(struct subuff *sub) {
         goto dropPkt;
     }
     else {
-        return handleRecv(incomingConnection, sub, hdr);
+        if(getLastRecvSeq(incomingConnection) == ntohl(hdr->tcpSeqNum)) {
+            return handleRecv(incomingConnection, sub, hdr);
+        }
+        
     }
     dropPkt:
     free_sub(sub);
