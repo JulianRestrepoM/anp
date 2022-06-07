@@ -82,28 +82,28 @@ void tdev_init(void)
         printf("ERROR device alloc failed, ret %d, errno %d \n", ret, errno);
         exit(-ret);
     }
-    printf("tap device OK, %s \n", _tdev->devname);
+    // printf("tap device OK, %s \n", _tdev->devname);
     // bring the device up
     ret = run_bash_command("ip link set dev %s up", _tdev->devname);
     if(0 != ret){
         printf("ERROR failed getting the device up, errno %d \n", errno);
         exit(-ret);
     }
-    printf("OK: device should be up now, %s \n", ANP_SUBNET_TAP);
+    // printf("OK: device should be up now, %s \n", ANP_SUBNET_TAP);
     //2. set the CIDR routing
     ret = run_bash_command("ip route add dev %s %s", _tdev->devname, ANP_SUBNET_TAP);
     if (0 != ret) {
         printf("ERROR failed setting the device route %s, errno %d \n", ANP_SUBNET_TAP, errno);
         exit(-ret);
     }
-    printf("OK: setting the device route, %s \n", ANP_SUBNET_TAP);
+    // printf("OK: setting the device route, %s \n", ANP_SUBNET_TAP);
     // 3. setup the device address (MUST be last, the ordering is important).
     ret = run_bash_command("ip address add dev %s local %s", _tdev->devname, ANP_IP_TAP_DEV);
     if (0 != ret) {
         printf("ERROR failed setting the device address, %s errno %d \n", ANP_IP_TAP_DEV, errno);
         exit(-ret);
     }
-    printf("OK: setting the device address %s \n", ANP_IP_TAP_DEV);
+    // printf("OK: setting the device address %s \n", ANP_IP_TAP_DEV);
 }
 
 int tdev_read(char *buf, int len)

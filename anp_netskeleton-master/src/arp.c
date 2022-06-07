@@ -44,7 +44,7 @@ static int process_arp_entry(struct arp_hdr *hdr, struct arp_ipv4 *data){
     list_for_each(item, &arp_cache) {
         entry = list_entry(item, struct arp_cache_entry, list);
         if (entry->arpIpv4.src_ip == data->src_ip) {
-            printf("ARP an entry updated \n");
+            // printf("ARP an entry updated \n");
             memcpy(entry->arpIpv4.src_mac, data->src_mac, 6);
             // if it matches we consumed it
             return 0;

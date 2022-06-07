@@ -41,6 +41,9 @@ int sendFin(struct connection *connection) {
 
 struct subuff_head *dataSplit(struct connection *connection, const void *buf, size_t len) {
     int maxSendLen = ANP_MTU_15_MAX_SIZE - (ETH_HDR_LEN + IP_HDR_LEN + TCP_HDR_LEN + 8);
+    if(maxSendLen > WIN_SIZE) {
+        maxSendLen = WIN_SIZE;
+    }
     int lenToSend = maxSendLen;
     int lastSentPtr = 0;
 

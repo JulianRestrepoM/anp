@@ -69,7 +69,7 @@ void __attribute__ ((constructor)) _init_anp_netstack() {
 #else
     unsetenv("LD_PRELOAD");
 #endif
-    printf("Hello there, I am ANP networking stack!\n");
+    // printf("Hello there, I am ANP networking stack!\n");
     _function_override_init();
     // this is the external end, at 10.0.0.5
     tdev_init();

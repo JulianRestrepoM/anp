@@ -1,0 +1,210 @@
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.39 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42504 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.89 GBytes  3.34 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.09 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42506 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.92 GBytes  3.37 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.02 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42508 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.85 GBytes  3.31 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.57 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42510 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.98 GBytes  3.42 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.23 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42512 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.95 GBytes  3.40 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.15 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42514 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.88 GBytes  3.33 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.36 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42516 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.90 GBytes  3.35 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size:  765 KByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42518 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.93 GBytes  3.37 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.59 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42520 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  4.17 GBytes  3.58 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.11 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42522 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.84 GBytes  3.30 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.12 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42524 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.8 sec  2.17 GBytes  1.73 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.88 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42526 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.85 GBytes  3.31 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.20 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42528 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.94 GBytes  3.38 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.40 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42530 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.96 GBytes  3.41 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.49 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42532 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.87 GBytes  3.33 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.87 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42534 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.92 GBytes  3.37 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.27 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42536 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.88 GBytes  3.33 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.25 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42538 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.98 GBytes  3.42 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.36 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42540 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.81 GBytes  3.27 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.68 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42544 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.91 GBytes  3.36 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.23 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42546 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.89 GBytes  3.34 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.58 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42548 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-12.4 sec  2.89 GBytes  2.00 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size:  629 KByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42550 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.89 GBytes  3.34 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.32 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42552 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.90 GBytes  3.35 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.34 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42554 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.87 GBytes  3.33 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.04 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42556 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.91 GBytes  3.36 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.49 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42558 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  4.03 GBytes  3.46 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.93 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42560 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.96 GBytes  3.40 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 1.02 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42562 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.92 GBytes  3.36 Gbits/sec
+------------------------------------------------------------
+Client connecting to 192.168.100.35, TCP port 5001
+TCP window size: 2.04 MByte (default)
+------------------------------------------------------------
+[  3] local 192.168.100.25 port 42566 connected with 192.168.100.35 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.0 sec  3.88 GBytes  3.34 Gbits/sec

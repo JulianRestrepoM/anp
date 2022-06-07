@@ -57,11 +57,11 @@ int handleAck(struct subuff *sub) {
         if(incomingConnection != NULL) {
             return handleFinAck(sub);
         }
-        printf("ITS HEREEEEE\n");
+        // printf("ITS HEREEEEE\n");
         incomingConnection = findConnectionbyPort((hdr->tcpDest)); //fixes some packages getting dropped accidnetly because it could not find by seqnum. 
         
         if(incomingConnection != NULL && (getLastRecvSeq(incomingConnection) == ntohl(hdr->tcpSeqNum))) {
-            printf("SAVED\n");
+            // printf("SAVED\n");
             return handleRecv(incomingConnection, sub, hdr);
         }
         printf("error: could not find connection\n");
