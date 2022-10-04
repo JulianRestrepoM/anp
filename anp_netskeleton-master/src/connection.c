@@ -80,11 +80,26 @@ void addNewConnection(struct connection *newConnection, struct socket *sock) {
     newConnection->tcpState = CLOSED;
     newConnection->readyToRecv = false;
     newConnection->waitingForAck = false;
+    newConnection->isLocalConnection = false;
 
     sub_queue_init(newConnection->recvPkts);
 
     pthread_mutex_unlock(&newConnection->connectionLock);
     connectionListAdd(newConnection);
+}
+
+int setIsLocal(struct connection *connection, bool isLocal) {
+    pthread_mutex_lock(&connection->connectionLock);
+    connection->isLocalConnection = isLocal;
+    pthread_mutex_unlock(&connection->connectionLock);
+}
+
+bool getIsLocal(struct connection *connection) {
+    bool isLocal;
+    pthread_mutex_lock(&connection->connectionLock);
+    isLocal = connection->isLocalConnection;
+    pthread_mutex_unlock(&connection->connectionLock);
+    return isLocal;
 }
 
 int setState(struct connection *connection, int state) {

@@ -45,6 +45,7 @@ int handleAck(struct subuff *sub);
 int handleSyn(struct subuff *sub);
 int sendAck(struct connection *connection, uint32_t ackNum);
 struct subuff *makeAckSub(struct connection *connection, uint32_t ackNum);
+int sendTcpDataTest(struct connection *connection, const void *buf, size_t len);
 int sendTcpData(struct connection *connection, const void *buf, size_t len);
 int getData(struct connection *connection, void *buf, size_t len);
 int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct tcpHdr *hdr);

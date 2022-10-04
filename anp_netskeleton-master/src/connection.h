@@ -31,6 +31,7 @@ struct connection {
     uint32_t seqNum;
     int packetNum;
     uint32_t lastRecvSeq;
+    bool isLocalConnection;
 
 };
 
@@ -47,6 +48,8 @@ struct connection* findConnectionBySeqNum(uint32_t num);
 struct connection* findConnectionByFd(int fd);
 struct connection* findConnectionbyPort(uint16_t port);
 void addNewConnection(struct connection *newConnection, struct socket *sock);
+int setIsLocal(struct connection *connection, bool isLocal);
+bool getIsLocal(struct connection *connection);
 int setState(struct connection *connection, int state);
 int getState(struct connection *connection);
 int setWaitingForAck(struct connection *connection, bool waiting);

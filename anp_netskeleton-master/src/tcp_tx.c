@@ -2,6 +2,11 @@
 
 int sendSyn(struct connection *connection) {
     struct subuff *sub = makeSynSub(connection);
+    if(getIsLocal(connection)) {
+        printf("sendSynLocal\n");
+        tcpRx(sub);
+        return 0;
+    }
     int ipOutputResult = ip_output(connection->sock->dstaddr, sub);
     int tries  = 3;
 
@@ -45,9 +50,10 @@ struct subuff_head *dataSplit(struct connection *connection, const void *buf, si
         maxSendLen = WIN_SIZE;
     }
     int lenToSend = maxSendLen;
-    int lastSentPtr = 0;
+    unsigned int lastSentPtr = 0;
+    unsigned int theLen =  (unsigned int)len;
 
-    if(len <= maxSendLen) { //if first packet is smaller than max send, then it sends maxsend instead of just len
+    if(theLen <= maxSendLen) { //if first packet is smaller than max send, then it sends maxsend instead of just len
         lenToSend = len;
     }
 
@@ -55,7 +61,7 @@ struct subuff_head *dataSplit(struct connection *connection, const void *buf, si
     struct subuff_head *subsToSend = (struct subuff_head *) malloc(sizeof(struct subuff_head));
     sub_queue_init(subsToSend);
 
-    while(lastSentPtr < len) {
+    while(lastSentPtr < theLen) {
         struct subuff *sub = allocTcpSub(lenToSend);
 
         sub_queue_tail(subsToSend, sub);
@@ -74,11 +80,11 @@ struct subuff_head *dataSplit(struct connection *connection, const void *buf, si
 
         lastSentPtr += lenToSend;
 
-        if((len - lastSentPtr) > maxSendLen) {
+        if((theLen - lastSentPtr) > maxSendLen) {
             lenToSend = maxSendLen;
         }
         else {
-            lenToSend = (len - lastSentPtr);
+            lenToSend = (theLen - lastSentPtr);
         }
     }
     return subsToSend;
@@ -89,6 +95,7 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
     int ret;
     int totalSent = 0;
     struct subuff *sending;
+    int i = 0;
 
     while(sub_queue_empty(subsToSend) == 0) {
         sending = sub_dequeue(subsToSend);
@@ -107,8 +114,30 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
                 return wait;
             }
         }
-        
+        totalSent += ret;
+        free_sub(sending);
+        i++;
+    }
+    return totalSent;
+}
 
+int sendTcpDataTest(struct connection *connection, const void *buf, size_t len) {
+    struct subuff_head *subsToSend = dataSplit(connection, buf, len);
+    int ret;
+    int totalSent = 0;
+    struct subuff *sending;
+
+    while(sub_queue_empty(subsToSend) == 0) {
+        sending = sub_dequeue(subsToSend);
+        uint32_t lastByte = sending->len - TCP_HDR_LEN;
+
+        setSeqNum(connection, getSeqNum(connection) + lastByte);
+
+        ret = ip_output(connection->sock->dstaddr, sending);
+        if(ret < 0) {
+            return ret;
+        }
+        
         totalSent += ret;
         free_sub(sending);
     }
