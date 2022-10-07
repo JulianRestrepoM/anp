@@ -27,14 +27,39 @@ int tcpRx(struct subuff *sub) {
 
 int handleSyn(struct subuff *sub) {
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
-    struct connection *connection = findConnectionbyPort(hdr->tcpDest);
+    // printf("SYN PORTDST %d\n", hdr->tcpDest);
+    // printf("SYN PORTSOURCE %d\n", hdr->tcpSource);
+    struct connection *connection = findConnectionbyPort(htons(hdr->tcpDest));
     if(connection == NULL) {
-        printf("ERROR: handleSyn did not find connection");
-        return -1;
+        printf("ERROR: handleSyn did not find connection\n");
+        goto dropPkt;
     }
-    printf("FOUND IT\n");
+    printf("handleSyn State = %d\n", getState(connection));
+    if(getState(connection) != LISTEN) {
+        printf("ERROR: handleSyn wrong state\n");
+        goto dropPkt;
+    }
+    setState(connection, SYN_RECIEVED);
+    connection->sock->dstport = ntohs(hdr->tcpSource);
+    setLastRecvSeqNum(connection, ntohl(hdr->tcpSeqNum));
+    // printf("HandleSyn dstport = %d\n", connection->sock->dstport);
+    //todo: I think I might need to acutally wait to see if the connection gets accepted before doing this
+    sendSynAck(connection);
+    setWaitingForAck(connection, true);
+    if(getWaitingForAck(connection)) {
+        int wait = waitForAck(connection);
+        if(wait == -1) {
+            return wait;
+        }
+    }
+    setState(connection, ESTABLISHED);
+    connection->sock->pendingC = true;
 
     return 0;
+
+    dropPkt:
+    free_sub(sub);
+    return -1;
 }
 
 int handleAck(struct subuff *sub) {
@@ -103,6 +128,7 @@ int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct
 }
 
 int handleSynAck(struct subuff *sub) {
+    printf("handleSynAck\n");
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
     uint32_t ackNum = ntohl(hdr->tcpAckNum);
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum - 1);
@@ -121,6 +147,8 @@ int handleSynAck(struct subuff *sub) {
     pthread_mutex_lock(&incomingConnection->connectionLock);
     pthread_cond_signal(&incomingConnection->synackRecv);
     pthread_mutex_unlock(&incomingConnection->connectionLock);
+
+    setSynAckRecv2(incomingConnection, true);
 
     free_sub(sub);
     return 0;

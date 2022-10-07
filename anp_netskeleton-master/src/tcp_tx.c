@@ -4,7 +4,8 @@ int sendSyn(struct connection *connection) {
     struct subuff *sub = makeSynSub(connection);
     if(getIsLocal(connection)) {
         printf("sendSynLocal\n");
-        tcpRx(sub);
+        tcpRx(sub); //TODO: doing it on TCP level might not be enough. Might need to do it on IP level instead
+        // free_sub(sub);
         return 0;
     }
     int ipOutputResult = ip_output(connection->sock->dstaddr, sub);
@@ -20,6 +21,30 @@ int sendSyn(struct connection *connection) {
     return ipOutputResult;
 }
 
+int sendSynAck(struct connection *connection) {
+    struct subuff *sub = makeSynAckSub(connection);
+
+    if(getIsLocal(connection)) {
+        printf("sendSynAck Local\n");
+        tcpRx(sub);
+        // free_sub(sub);
+        return 0;
+    }
+
+    int ipOutputResult = ip_output(connection->sock->dstaddr, sub);
+    int tries  = 3;
+
+    while((ipOutputResult == -11) && (tries != 0)) {
+        sleep(1);
+        sub = makeSynAckSub(connection);
+        ipOutputResult = ip_output(connection->sock->dstaddr, sub);
+        tries--;
+    }
+    free_sub(sub);
+    return ipOutputResult;
+
+}
+
 int sendAck(struct connection *connection, uint32_t ackNum) {
 
     if(getState(connection) != ESTABLISHED) {
@@ -27,6 +52,13 @@ int sendAck(struct connection *connection, uint32_t ackNum) {
     }
 
     struct subuff *sub = makeAckSub(connection, ackNum);
+
+    if(getIsLocal(connection)) {
+        printf("sendAck Local\n");
+        tcpRx(sub);
+        return 0;
+    }
+
     int ipOutRes = ip_output(connection->sock->dstaddr, sub);
     free_sub(sub);
     return ipOutRes;
@@ -39,6 +71,11 @@ int sendFin(struct connection *connection) {
     // }
 
     struct subuff *sub = makeFinSub(connection);
+    if(getIsLocal(connection)) {
+        printf("sendAck Local\n");
+        tcpRx(sub);
+        return 0;
+    }
     int ipOutRes = ip_output(connection->sock->dstaddr, sub);
     free_sub(sub);
     return ipOutRes;

@@ -42,7 +42,6 @@ static int (*_setsockopt)(int sockfd, int level, int optname, const void *optval
 static int (*_getsockopt)(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) = NULL;
 static ssize_t (*_sendto)(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) = NULL;
 static ssize_t (*_recvfrom)(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) = NULL;
-static int (*_fcntl)(int fd, int cmd, ...) = NULL;
 static int (*_getpeername)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 static ssize_t (*_write)(int fd, const void *buf, size_t count) = NULL;
 static ssize_t (*_read)(int fd, void *buf, size_t count) = NULL;
@@ -52,6 +51,7 @@ static int (*_poll)(struct pollfd *fds, nfds_t nfds, int timeout) = NULL;
 static int (*_bind)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) = NULL;
 static int (*_listen)(int sockfds, int backlog) = NULL;
 static int (*_accept)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
+static int (*_fcntl)(int fd, int cmd, ...) = NULL;
 
 int anpCallCounter = 0;
 
@@ -161,6 +161,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         
         memcpy(&currSocket->dstport, &sin->sin_port, sizeof(sin->sin_port));
         printf("DESTINATION PORT = %d\n", currSocket->dstport);
+        printf("SOURCE PORT = %d\n", currSocket->srcport);
         // currSocket->dstport = sin->sin_port; //todo can i do this instead??
 
         struct connection *newConnection = allocConnection();
@@ -373,13 +374,13 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
     return _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 }
 
-int fcntl(int fd, int cmd, ...) {
-    printf("CLIENT CALLED: fcntl; fd=%d, command=%d\n", fd, cmd);
-    if(isFdUsed(fd)) {
-        return 0;
-    }
-    return _fcntl(fd, cmd);
-}
+// int fcntl(int fd, int cmd, ...) {
+//     printf("CLIENT CALLED: fcntl; fd=%d, command=%d\n", fd, cmd);
+//     if(isFdUsed(fd)) {
+//         return 0;
+//     }
+//     return _fcntl(fd, cmd);
+// }
 
 int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
     printf("CLIENT CALLED: getpeername; sock=%d\n", sockfd);
@@ -408,10 +409,14 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
     if(isFdUsed(sockfd)) {
 
         struct socket *currsock = getSocketByFd(sockfd);
-        if(*addrlen < currsock->srcaddrlen) {
+        if(*addrlen < sizeof(currsock->srcport)) {
             printf("sockname address too small\n");
             // memcpy(&addrlen, &currsock->srcaddrlen, sizeof(currsock->srcaddrlen));
             addrlen = currsock->srcaddrlen; 
+            uint16_t *portAddr = (currsock->srcport);
+            memcpy(&addr->sa_data, &portAddr, addrlen);
+            printf("lieves\n");
+            return 0;
         }
         // uint32_t *netAddr = (currsock->srcaddr);
         // memcpy(&addr->sa_data, &netAddr, currsock->srcaddrlen);
@@ -419,7 +424,7 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
         // sprintf(addr->sa_data, "%08x", currsock->srcaddr);
 
         uint16_t *portAddr = (currsock->srcport);
-        memcpy(&addr->sa_data, &portAddr, currsock->srcaddrlen);
+        memcpy(&addr->sa_data, &portAddr, sizeof(currsock->srcport));
         addrlen = sizeof(portAddr);
 
         // struct sockaddr_in *sin = (struct sockaddr_in *)addr;
@@ -491,7 +496,11 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
 }
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout) { 
-    printf("CLIENT CALLED: poll\n");
+    int fd = fds->fd;
+    printf("CLIENT CALLED: poll %d\n", fd);
+    if(isFdUsed(fd)) {
+        return 0;
+    }
 
     // int result = _poll(fds, nfds, timeout);
     // printf("POLL Return %d\n", result);
@@ -531,7 +540,7 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 }
 
 int listen(int sockfd, int backlog) {
-    printf("CLIENT CALLED: listen; sock%d\n", sockfd);
+    printf("CLIENT CALLED: listen; sock%d, backlog %d\n", sockfd, backlog);
     if(isFdUsed(sockfd)) { 
         ++anpCallCounter;
         struct connection *connection = findConnectionByFd(sockfd);
@@ -554,6 +563,30 @@ int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrl
     }
 
     return _accept(sockfd, addr, addrlen);
+}
+
+int fcntl64(int fd, int cmd, ...) {
+    printf("CLIENT CALLED: fcntl\n");
+    if(isFdUsed(fd)) {
+        // printf("FCNTL HACKED %d\n", cmd);
+
+        if(cmd == 3) { //F_GETFL 
+
+        }
+        else if(cmd = 4) { //F_SETFL
+            va_list args;
+            va_start(args, cmd);
+            int flagValue = va_arg(args, int);
+
+            printf("FCNTL SET %d\n", flagValue);
+
+        }
+
+        return 0;
+    }
+    printf("FCNTL NOT HACKED\n");
+    return 0;
+    
 }
 
 

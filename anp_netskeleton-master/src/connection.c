@@ -4,6 +4,7 @@ void initConnectionList() {
     connectionHead.connectionListHead = (struct list_head *) malloc(sizeof(struct list_head));
     connectionHead.len = 0;
     list_init(connectionHead.connectionListHead);
+    srand(time(NULL)); //initialize random seed for genRandomPort
 }
 
 struct connection* allocConnection() {
@@ -81,6 +82,7 @@ void addNewConnection(struct connection *newConnection, struct socket *sock) {
     newConnection->readyToRecv = false;
     newConnection->waitingForAck = false;
     newConnection->isLocalConnection = false;
+    newConnection->synAckRecv2 = false;
 
     sub_queue_init(newConnection->recvPkts);
 
@@ -100,6 +102,20 @@ bool getIsLocal(struct connection *connection) {
     isLocal = connection->isLocalConnection;
     pthread_mutex_unlock(&connection->connectionLock);
     return isLocal;
+}
+
+int setSynAckRecv2(struct connection *connection, bool synAckRecv) {
+    pthread_mutex_lock(&connection->connectionLock);
+    connection->synAckRecv2 = synAckRecv;
+    pthread_mutex_unlock(&connection->connectionLock);
+}
+
+bool getSynAckRecv2(struct connection *connection) {
+    bool synAck;
+    pthread_mutex_lock(&connection->connectionLock);
+    synAck = connection->synAckRecv2;
+    pthread_mutex_unlock(&connection->connectionLock);
+    return synAck;
 }
 
 int setState(struct connection *connection, int state) {
@@ -173,7 +189,6 @@ uint32_t setLastRecvSeqNum(struct connection *connection, uint32_t newSeq) {
 }
 
 int genRandomPort() {
-    srand(time(0));
     int portNum = (rand()% PORT_RANGE);
     return portNum;
 }

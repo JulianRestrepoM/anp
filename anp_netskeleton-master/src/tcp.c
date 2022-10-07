@@ -36,6 +36,19 @@ void setSynOptionsTcpHdr(struct subuff *sub, struct connection *connection) {
                                           
 }
 
+void setSynAckOptionsTcpHdr(struct subuff *sub, struct connection *connection) {
+    struct tcpHdr* hdrToSend = (struct tcpHdr*) sub_push(sub, TCP_HDR_LEN);
+
+    setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection), getLastRecvSeq(connection)+1);
+
+    hdrToSend->tcpSyn = 1;
+    hdrToSend->tcpAck = 1;
+    hdrToSend->tcpChecksum = do_tcp_csum((uint8_t *) hdrToSend, TCP_HDR_LEN, IPP_TCP,
+                                          htonl(connection->sock->srcaddr),
+                                          htonl(connection->sock->dstaddr));
+                                          
+}
+
 void setAckOptionsTcpHdr(struct subuff *sub, struct connection *connection, uint32_t ackNum) {
     struct tcpHdr* hdrToSend = (struct tcpHdr*) sub_push(sub, TCP_HDR_LEN);
     
@@ -70,6 +83,12 @@ struct subuff *allocTcpSub(int dataLen) {
 struct subuff *makeSynSub(struct connection *connection) {
     struct subuff *sub = allocTcpSub(0);
     setSynOptionsTcpHdr(sub, connection);
+    return sub;
+}
+
+struct subuff *makeSynAckSub(struct connection *connection) {
+    struct subuff *sub = allocTcpSub(0);
+    setSynAckOptionsTcpHdr(sub, connection);
     return sub;
 }
 
@@ -163,7 +182,11 @@ int doTcpHandshake(struct connection *connection) {
     }
 
     waitForSynAck(connection);
+    if(getSynAckRecv2(connection)) { //learn signaling check 04/10/2022 journal
+        setState(connection, SYN_SENT);
+    }
     if(getState(connection) != SYN_SENT) {
+        printf("handshake state %d\n", getState(connection));
         printf("error: Synack timeout\n");
         return -1;
     }

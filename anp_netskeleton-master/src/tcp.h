@@ -33,9 +33,12 @@ struct tcpHdr {
 
 struct tcpHdr *tcpHdrFromSub(struct subuff *sub);
 int sendSyn(struct connection *connection);
+int sendSynAck(struct connection *connection);
 struct subuff *allocTcpSub(int dataLen);
 struct subuff *makeSynSub(struct connection *connection);
+struct subuff *makeSynAckSub(struct connection *connection);
 void setSynOptionsTcpHdr(struct subuff *sub, struct connection *connection);
+void setSynAckOptionsTcpHdr(struct subuff *sub, struct connection *connection);
 int doTcpHandshake(struct connection *connection);
 void setGeneralOptionsTcpHdr(struct tcpHdr *hdr, struct connection *connection, uint32_t seqNum, uint32_t ackNum);
 void setAckOptionsTcpHdr(struct subuff *sub, struct connection *connection, uint32_t ackNum);

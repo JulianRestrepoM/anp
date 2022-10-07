@@ -14,6 +14,7 @@
 #define CLOSE_WAIT 6 //TODO: probably have to set the proper states when server initiantes CLosing
 #define LAST_ACK 7
 #define LISTEN 8
+#define SYN_RECIEVED 9
 #define PORT_RANGE (60999 - 32768 + 1) + 32768 //empirical ports
 
 
@@ -22,6 +23,7 @@ struct connection {
     pthread_cond_t synackRecv;
     pthread_cond_t ackRecv;
     pthread_cond_t finAckRecv;
+    bool synAckRecv2;
     bool waitingForAck;
     bool readyToRecv;
     struct subuff_head *recvPkts;
@@ -50,6 +52,8 @@ struct connection* findConnectionbyPort(uint16_t port);
 void addNewConnection(struct connection *newConnection, struct socket *sock);
 int setIsLocal(struct connection *connection, bool isLocal);
 bool getIsLocal(struct connection *connection);
+int setSynAckRecv2(struct connection *connection, bool synAckRecv);
+bool getSynAckRecv2(struct connection *connection);
 int setState(struct connection *connection, int state);
 int getState(struct connection *connection);
 int setWaitingForAck(struct connection *connection, bool waiting);
