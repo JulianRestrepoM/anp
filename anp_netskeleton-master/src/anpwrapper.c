@@ -167,14 +167,15 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         struct connection *newConnection = allocConnection();
         addNewConnection(newConnection, currSocket);
 
-        struct connection *dstConnection = findConnectionbyPort(htons(currSocket->dstport)); //TODO: risk assuming dstconnection is local. what if server is reused without ouside connection??
-        struct connection *currConnection = findConnectionByFd(sockfd);
+        // struct connection *dstConnection = findConnectionbyPort(htons(currSocket->dstport)); //TODO: risk assuming dstconnection is local. what if server is reused without ouside connection??
+        // struct connection *currConnection = findConnectionByFd(sockfd);
+        struct socket *dstSock = getSocketByPort(htons(currSocket->dstport));
 
-        if(dstConnection) {
+        if(dstSock) {
             printf("ITS LOCAL\n");
             // dstConnection->isLocalConnection == true; //might need to use locks for this
             // currConnection->isLocalConnection == true;
-            setIsLocal(dstConnection, true);
+            // setIsLocal(dstConnection, true);
             setIsLocal(newConnection, true);
         }
         else {
@@ -523,13 +524,13 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
         char *ip = inet_ntoa(sin->sin_addr);
         printf("ADDRESS = %s\n", ip);
 
-        //create a connection struct for the server
-        if (connectionHead.connectionListHead == NULL) 
-        {
-            initConnectionList();
-        }
-        struct connection *newConnection = allocConnection();
-        addNewConnection(newConnection, sock);
+        // //create a connection struct for the server
+        // if (connectionHead.connectionListHead == NULL) 
+        // {
+        //     initConnectionList();
+        // }
+        // struct connection *newConnection = allocConnection();
+        // addNewConnection(newConnection, sock);
 
         return 0;
     }
@@ -542,11 +543,14 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 int listen(int sockfd, int backlog) {
     printf("CLIENT CALLED: listen; sock%d, backlog %d\n", sockfd, backlog);
     if(isFdUsed(sockfd)) { 
-        ++anpCallCounter;
-        struct connection *connection = findConnectionByFd(sockfd);
-        connection->sock->backlog = backlog;
-        connection->sock->isPassive = true;
-        setState(connection, LISTEN);
+        // ++anpCallCounter;
+        // struct connection *connection = findConnectionByFd(sockfd);
+        // connection->sock->backlog = backlog;
+        // connection->sock->isPassive = true;
+        // setState(connection, LISTEN);
+        struct socket *sock = getSocketByFd(sockfd);
+        sock->backlog = backlog;
+        sock->isPassive = true;
         return 0;
     }
     return _listen(sockfd, backlog);
@@ -559,7 +563,9 @@ int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrl
         while(!sock->pendingC) {
 
         }
-        return socket(sock->domain, sock->type, sock->protocol);
+        int returnSocket = sock->pendingC->sock->fd;
+        sock->pendingC = NULL;
+        return returnSocket;
     }
 
     return _accept(sockfd, addr, addrlen);

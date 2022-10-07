@@ -14,7 +14,7 @@ struct socket {
     int fd;
     int backlog;
     bool isPassive;
-    bool pendingC;
+    struct connection *pendingC;
     uint32_t srcaddr;
     uint32_t dstaddr;
     socklen_t dstaddrlen;
@@ -37,6 +37,7 @@ void sockListAdd(struct socket *newSocket);
 void sockListRemove(struct socket *toDelete);
 bool isFdUsed(int fd);
 struct socket *getSocketByFd(int fd);
+struct socket *getSocketByPort(int port);
 struct socket* allocSock();
 
 #endif //ANPNETSTACK_SOCKET_H

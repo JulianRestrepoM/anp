@@ -15,7 +15,7 @@ struct socket *createSocket(int domain, int type, int protocol) {
     newSocket->protocol = protocol;
     newSocket->fd = sockHead.highestFd;
     newSocket->srcaddr = 0;
-    newSocket->pendingC = false;
+    newSocket->pendingC = NULL;
 
     sockListAdd(newSocket);
 
@@ -58,6 +58,18 @@ struct socket *getSocketByFd(int fd) {
     list_for_each(theFd, sockHead.listHead) {
         currSocket = list_entry(theFd, struct socket, list);
         if(currSocket->fd == fd) {
+            return currSocket;
+        }
+    }
+    return NULL;
+}
+
+struct socket *getSocketByPort(int port) {
+    struct list_head *socketLst;
+    struct socket *currSocket;
+    list_for_each(socketLst, sockHead.listHead) {
+        currSocket = list_entry(socketLst, struct socket, list);
+        if(currSocket->srcport == ntohs(port)) {
             return currSocket;
         }
     }

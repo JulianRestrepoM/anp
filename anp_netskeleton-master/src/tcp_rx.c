@@ -27,34 +27,55 @@ int tcpRx(struct subuff *sub) {
 
 int handleSyn(struct subuff *sub) {
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
-    // printf("SYN PORTDST %d\n", hdr->tcpDest);
-    // printf("SYN PORTSOURCE %d\n", hdr->tcpSource);
-    struct connection *connection = findConnectionbyPort(htons(hdr->tcpDest));
-    if(connection == NULL) {
-        printf("ERROR: handleSyn did not find connection\n");
+
+    struct socket *serverSocket = getSocketByPort(htons(hdr->tcpDest));
+    if(serverSocket == NULL) {
+        printf("ERROR: handleSyn did not find socketServer\n");
         goto dropPkt;
     }
-    printf("handleSyn State = %d\n", getState(connection));
-    if(getState(connection) != LISTEN) {
-        printf("ERROR: handleSyn wrong state\n");
+    if(!serverSocket->isPassive) {
+        printf("ERROR handleSyn: serverSocket not passive\n");
         goto dropPkt;
     }
-    setState(connection, SYN_RECIEVED);
-    connection->sock->dstport = ntohs(hdr->tcpSource);
-    setLastRecvSeqNum(connection, ntohl(hdr->tcpSeqNum));
-    // printf("HandleSyn dstport = %d\n", connection->sock->dstport);
-    //todo: I think I might need to acutally wait to see if the connection gets accepted before doing this
-    sendSynAck(connection);
-    setWaitingForAck(connection, true);
-    if(getWaitingForAck(connection)) {
-        int wait = waitForAck(connection);
+    if(serverSocket->pendingC) {
+        printf("ERROR: handleSyn: backlog full\n");
+        goto dropPkt;
+    }
+
+    int newSockFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    struct socket *newSocket = getSocketByFd(newSockFd);
+    newSocket->srcport = genRandomPort();
+    newSocket->dstport = ntohs(hdr->tcpSource);
+     //create a connection struct for the server
+    if (connectionHead.connectionListHead == NULL) 
+    {
+        initConnectionList();
+    }
+    struct connection *newConnection = allocConnection();
+    addNewConnection(newConnection, newSocket);
+
+    setState(newConnection, SYN_RECIEVED);
+    setLastRecvSeqNum(newConnection, ntohl(hdr->tcpSeqNum));
+    
+    if(findConnectionbyPort(ntohs(newSocket->dstport))) {
+        printf("recieved local SYN\n");
+        newConnection->isLocalConnection = true;
+    }
+    else {
+        printf("recieved outside SYN\n");
+        newConnection->isLocalConnection = false;
+    }
+
+    sendSynAck(newConnection);
+    setWaitingForAck(newConnection, true);
+    if(getWaitingForAck(newConnection)) {
+        int wait = waitForAck(newConnection);
         if(wait == -1) {
             return wait;
         }
     }
-    setState(connection, ESTABLISHED);
-    connection->sock->pendingC = true;
-
+    setState(newConnection, ESTABLISHED);
+    serverSocket->pendingC = newConnection;
     return 0;
 
     dropPkt:
