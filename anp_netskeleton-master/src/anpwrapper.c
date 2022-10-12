@@ -308,6 +308,13 @@ int close (int sockfd){
         ++anpCallCounter;
         int ret = 0;
         struct connection *toClose = findConnectionByFd(sockfd);
+        if(!toClose) {
+            struct socket *serverSocket = getSocketByFd(sockfd);
+            if(serverSocket) {
+                sockListRemove(serverSocket);
+                return 0;
+            }
+        }
         struct socket *sock = toClose->sock;
         if(sock->type == SOCK_STREAM) {
             ret = doTcpClose(toClose);
@@ -385,23 +392,57 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 
 int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
     printf("CLIENT CALLED: getpeername; sock=%d\n", sockfd);
-    // if(isFdUsed(sockfd)) {
-    //     struct socket *currsock = getSocketByFd(sockfd);
-    //     if(addrlen < currsock->dstaddrlen) {
-    //         printf("peer address too small");
-    //     }
-    //     // addr = currsock->dstaddr;
-    //     return 0;
-    // }
-    // int theAddr[16];
-    // printf("OLD PEER = ");
-    // for(int i = 0; i <16; i++) {
-    //     theAddr[i] = addr->sa_data[i];
-    //     printf("%d", theAddr[i]);
-    //     i++;
-    // }
-    // printf("\n");
-    return _getpeername(sockfd, addr, addrlen);
+    if(isFdUsed(sockfd)) {
+         struct socket *currsock = getSocketByFd(sockfd);
+        if(*addrlen < sizeof(currsock->srcaddrlen)) {
+            printf("sockname address too small\n");
+            // memcpy(&addrlen, &currsock->srcaddrlen, sizeof(currsock->srcaddrlen));
+            addrlen = currsock->srcaddrlen; 
+            uint16_t *portAddr = (currsock->srcaddr);
+            memcpy(&addr->sa_data, &portAddr, addrlen);
+            printf("lieves\n");
+            return 0;
+        }
+
+        struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+        char *ip = inet_ntoa(sin->sin_addr);
+        printf("getperrname BEFORE = %s and PORT = %d %d\n", ip, sin->sin_port, sin->sin_family);
+        
+
+        // uint32_t *portAddr = 0x7fff0000;
+        // memcpy(&addr->sa_data, &portAddr, sizeof(currsock->srcaddr));
+        // addrlen = sizeof(portAddr);
+
+        sin->sin_port = currsock->dstport;
+        sin->sin_addr.s_addr = htonl(0x7f000001);
+        sin->sin_family = 2;
+        // memcpy(&addr,&sin, sizeof(sin));
+        struct sockaddr *returnVal = (struct sockaddr *)sin;
+        memcpy(&addr,&returnVal, sizeof(returnVal));
+
+        // struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+        // char *ip = inet_ntoa(sin->sin_addr);
+        // printf("getpeername Result = %s\n", ip);
+
+        sin = (struct sockaddr_in *)addr;
+        ip = inet_ntoa(sin->sin_addr);
+        printf("getpeername  AFTER = %s %d %d\n", ip, sin->sin_port, sin->sin_family);
+        
+        return 0;
+    }
+
+    struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+    char *ip = inet_ntoa(sin->sin_addr);
+    printf("getpeername = %s %d %d\n", ip, sin->sin_port, sin->sin_family);
+
+    int result = _getpeername(sockfd, addr, addrlen);
+
+    sin = (struct sockaddr_in *)addr;
+    ip = inet_ntoa(sin->sin_addr);
+    printf("getpeername AFTER = %s %d %d\n", ip, sin->sin_port, sin->sin_family);
+    
+    return result;
+    // return _getpeername(sockfd, addr, addrlen);
     return 0;
 }
 
@@ -424,24 +465,39 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
         // addrlen = currsock->srcaddrlen;
         // sprintf(addr->sa_data, "%08x", currsock->srcaddr);
 
-        uint16_t *portAddr = (currsock->srcport);
-        memcpy(&addr->sa_data, &portAddr, sizeof(currsock->srcport));
-        addrlen = sizeof(portAddr);
+        struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+        char *ip = inet_ntoa(sin->sin_addr);
+        printf("ADDRESS BEFORE = %s %d %d\n", ip, sin->sin_port, sin->sin_family);
 
-        // struct sockaddr_in *sin = (struct sockaddr_in *)addr;
-        // char *ip = inet_ntoa(sin->sin_addr);
-        // printf("ADDRESS = %s\n", ip);
+        // uint16_t *portAddr = (currsock->srcport);
+        // memcpy(&addr->sa_data, &portAddr, sizeof(currsock->srcport));
+        // addrlen = sizeof(portAddr);
+        // printf("getSOckNAme %d\n", portAddr);
+
+        sin->sin_port = currsock->srcport;
+        sin->sin_addr.s_addr = htonl(0x7f000001);
+        struct sockaddr *returnVal = (struct sockaddr *)sin;
+        memcpy(&addr,&returnVal, sizeof(returnVal));
+
+        sin = (struct sockaddr_in *)addr;
+        ip = inet_ntoa(sin->sin_addr);
+        printf("getsockname AFter = %s %d %d\n", ip, sin->sin_port, sin->sin_family);
 
         return 0;
     }
-    // struct sockaddr_in *sin = (struct sockaddr_in *)addr;
-    // char *ip = inet_ntoa(sin->sin_addr);
-    // printf("ADDRESS BEFORE  = %s\n", ip);
-    // int result = _getsockname(sockfd, addr, addrlen);
-    // struct sockaddr_in *sin2 = (struct sockaddr_in *)addr;
-    // char *ip2 = inet_ntoa(sin2->sin_addr);
-    // printf("ADDRESS AFter  = %s\n", ip2);
-    // return result;
+
+    struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+    char *ip = inet_ntoa(sin->sin_addr);
+    printf("getsockname = %s %d %d\n", ip, sin->sin_port, sin->sin_family);
+
+    int result = _getsockname(sockfd, addr, addrlen);
+ 
+    sin = (struct sockaddr_in *)addr;
+    ip = inet_ntoa(sin->sin_addr);
+    printf("getsockname AFTER = %s %d %d\n", ip, sin->sin_port, sin->sin_family);
+    
+
+    return result;
 
     return _getsockname(sockfd, addr, addrlen);
     
