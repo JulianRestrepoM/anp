@@ -141,10 +141,17 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
         setSeqNum(connection, getSeqNum(connection) + lastByte);
         setWaitingForAck(connection, true);
 
-        ret = ip_output(connection->sock->dstaddr, sending);
-        if(ret < 0) {
-            return ret;
+        if(getIsLocal(connection)) {
+            tcpRx(sending);
+            ret = sending->len;
         }
+        else {
+            ret = ip_output(connection->sock->dstaddr, sending);
+            if(ret < 0) {
+                return ret;
+            }
+        }
+        
         if(getWaitingForAck(connection)) {
             int wait = waitForAck(connection);
             if(wait == -1) {
@@ -152,7 +159,10 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
             }
         }
         totalSent += ret;
-        free_sub(sending);
+        if(!getIsLocal(connection)) {
+            free_sub(sending);
+        }
+        
         i++;
     }
     return totalSent;

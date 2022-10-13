@@ -414,8 +414,8 @@ int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict
         // addrlen = sizeof(portAddr);
 
         sin->sin_port = currsock->dstport;
-        sin->sin_addr.s_addr = htonl(0x7f000001);
-        sin->sin_family = 2;
+        sin->sin_addr.s_addr = htonl(0x7f000001); //TODO: get this value dynamically
+        sin->sin_family = currsock->domain;
         // memcpy(&addr,&sin, sizeof(sin));
         struct sockaddr *returnVal = (struct sockaddr *)sin;
         memcpy(&addr,&returnVal, sizeof(returnVal));
@@ -556,6 +556,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
     int fd = fds->fd;
     printf("CLIENT CALLED: poll %d\n", fd);
     if(isFdUsed(fd)) {
+        sleep(1);
         return 0;
     }
 
@@ -628,7 +629,7 @@ int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrl
 }
 
 int fcntl64(int fd, int cmd, ...) {
-    printf("CLIENT CALLED: fcntl\n");
+    printf("CLIENT CALLED: fcntl socket %d\n", fd);
     if(isFdUsed(fd)) {
         // printf("FCNTL HACKED %d\n", cmd);
 
@@ -643,7 +644,6 @@ int fcntl64(int fd, int cmd, ...) {
             printf("FCNTL SET %d\n", flagValue);
 
         }
-
         return 0;
     }
     printf("FCNTL NOT HACKED\n");
