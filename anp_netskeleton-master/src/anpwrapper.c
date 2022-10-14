@@ -118,7 +118,7 @@ int connectTest(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         }
         currSocket->dstaddrlen = addrlen;
         currSocket->srcport = genRandomPort();
-            currSocket->srcaddr = SRC_ADDR;
+        currSocket->srcaddr = SRC_ADDR;
 
         struct connection *newConnection = allocConnection();
         addNewConnection(newConnection, currSocket);
@@ -341,35 +341,17 @@ int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t
 }
 
 int getsockopt(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) {
-    printf("CLIENT CALLED: getsockopt; sockf=%d\n", sockfd);
-    // printf("OPTLEN = %02x, Optval =%p\n", (uint8_t*)optlen[0], optval);
+    printf("CLIENT CALLED: getsockopt; sockf=%d level %d optname %d\n", sockfd, level, optname);
+
     if(isFdUsed(sockfd)) {
-        ++anpCallCounter;
-        // if(level == 6) {
-        //     printf("anpSOck\n");
-        //     optval = 1448;
-        //     optlen = 4;
-        //     return 0;
-        // }
-        // if(level == 1) {
-        //     // struct socket *currSocket = getSocketByFd(sockfd);
-        //     // optval = (void *restrict) 113;
-        //     // optval = 113;
-        //     // *optlen =  sizeof(optval);
-        //     // printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
-        //     return 0;
-         // }
-        // optval = 1072;
-        // optlen = sizeof(1072);
+        // *optlen = 4;
+        // int *optvalResult = (int*)optval;
+        // optvalResult = 0;
+        // optval = optvalResult;
         return 0;
+
     }
-    // int result = _getsockopt(sockfd, level, optname, optval, optlen);
-    // // optval = 113;
-    // // optlen[0]= 1214141;
-    // // printf("OPTlen = %02x, OPTval =%p\n", (uint8_t*)optlen[0], optval);
     return _getsockopt(sockfd, level, optname, optval, optlen);
-    // return result;
-    return 0;
 }
 
 ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) {
@@ -382,13 +364,6 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
     return _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 }
 
-// int fcntl(int fd, int cmd, ...) {
-//     printf("CLIENT CALLED: fcntl; fd=%d, command=%d\n", fd, cmd);
-//     if(isFdUsed(fd)) {
-//         return 0;
-//     }
-//     return _fcntl(fd, cmd);
-// }
 
 int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
     printf("CLIENT CALLED: getpeername; sock=%d\n", sockfd);
@@ -557,12 +532,45 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
     printf("CLIENT CALLED: poll %d\n", fd);
     if(isFdUsed(fd)) {
         sleep(1);
+        int pollEvent = fds->events;
+        printf("POLL EVENT %d \n", pollEvent);
+        if(pollEvent == 4) { //POLLOUT
+            fds->revents = 4;
+            return 1;
+        }
+        else if(pollEvent == 262) { // POLLWRBAND | POLLRDNORM | POLLNVAL | POLLPRI according to bit mask
+            struct connection *connection = findConnectionByFd(fd);
+            // if(!sub_queue_empty(connection->recvPkts)) {
+            //     printf("THIS ONE 1\n");
+            //     fds->revents = 260;
+            //     return 1;
+            // }
+            printf("THIS ONE 2\n");
+            // fds->revents = 200; //curl doesnt like this. 
+            fds->revents = 260;
+            return 1;
+        }
+        else if(pollEvent == 1) { //POLLIN
+            struct connection *connection = findConnectionByFd(fd);
+            if(connection == NULL) {
+                return 0;
+            }
+            if(!sub_queue_empty(connection->recvPkts)) {
+                fds->revents = 1;
+                return 1;
+            }
+            return 0;
+        }
         return 0;
     }
+    if(fd = 4) {
+        printf("POLL EVENT %d \n", fds->events);
+        int result = _poll(fds, nfds, timeout);
+        printf("POLL RESULT %d and return %d\n", fds->revents, result);
+        return result;
+    }
+    
 
-    // int result = _poll(fds, nfds, timeout);
-    // printf("POLL Return %d\n", result);
-    // return result;
 
     return _poll(fds, nfds, timeout);
 }
