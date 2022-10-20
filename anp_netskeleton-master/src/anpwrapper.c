@@ -251,7 +251,7 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
                 printf("error: connection not in ESTABLISHED state\n");
                 return -1;
             }
-            return sendTcpData(connection, buf, len);
+            return sendTcpData(connection, buf, len)-54; //tcp segment size
         }
         else if(connection->sock->type & SOCK_DGRAM) {
             return sendUdpData(connection, buf, len);
@@ -395,6 +395,7 @@ int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict
         struct sockaddr *returnVal = (struct sockaddr *)sin;
         memcpy(&addr,&returnVal, sizeof(returnVal));
 
+        addrlen = (socklen_t)sizeof(returnVal);
         // struct sockaddr_in *sin = (struct sockaddr_in *)addr;
         // char *ip = inet_ntoa(sin->sin_addr);
         // printf("getpeername Result = %s\n", ip);
@@ -451,6 +452,7 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
 
         sin->sin_port = currsock->srcport;
         sin->sin_addr.s_addr = htonl(0x7f000001);
+        sin->sin_family = currsock->domain;
         struct sockaddr *returnVal = (struct sockaddr *)sin;
         memcpy(&addr,&returnVal, sizeof(returnVal));
 
@@ -479,19 +481,23 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
 }
 
 ssize_t write(int fd, const void*buf, size_t count) {
-    printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+    // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        // printf("ANP CLIENT CALLED: write; sock=%d, count=%u\n", fd, count);
-                struct socket *sock = getSocketByFd(fd); 
+        printf("ANP CLIENT CALLED: write; sock=%d, count=%u\n", fd, count);
+        struct socket *sock = getSocketByFd(fd); 
+
+        // ssize_t result = send(fd, buf, count, 0);
+        // printf("RESULTED %d\n", result);
+        // return result;
         return send(fd, buf, count, 0);
     }
     return _write(fd, buf, count);
 }
 
 ssize_t read(int fd, void *buf, size_t count) {
-    printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+    // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
-        // printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+        printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
         return recv(fd, buf, count, 0);
     }
     return _read(fd, buf, count);
