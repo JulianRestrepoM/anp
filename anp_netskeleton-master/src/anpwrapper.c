@@ -567,6 +567,17 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
             }
             return 0;
         }
+        else if(pollEvent == 195) {
+            struct connection *connection = findConnectionByFd(fd);
+            if(connection == NULL) {
+                return 0;
+            }
+            if(!sub_queue_empty(connection->recvPkts)) {
+                fds->revents = 65;
+                return 1;
+            }
+            return 0;
+        }
         return 0;
     }
     if(fd = 4) {
