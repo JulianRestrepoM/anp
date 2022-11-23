@@ -279,10 +279,26 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                     
             }
         }
-        // else {
-        //     pthread_mutex_unlock(&connection->connectionLock);
-        // }
+        else {
+            // pthread_mutex_unlock(&connection->connectionLock);
+            printf("STILL NEED %d\n", len - lenRecv);
+            // sleep(1);
+            // i++;
+            // if(i > 5) {
+            //     printf("getData Timed out\n");
+            //     return lenRecv;
+            // }
+            if(connection->sock->isNonBlocking) {
+                printf("NOT blOCKED\n");
+                errno = EAGAIN;
+                // printf("Q LENgth get nodata %ld\n", sub_queue_len(connection->recvPkts));
+                return -1;
+                return lenRecv; //prob should also return errnos
+            }
+            printf("blOCKED\n");
+        }
     }
+    // printf("Q LENgth get data %ld\n", sub_queue_len(connection->recvPkts));
     return lenRecv;
 }
 

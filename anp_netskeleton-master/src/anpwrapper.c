@@ -51,9 +51,7 @@ static int (*_poll)(struct pollfd *fds, nfds_t nfds, int timeout) = NULL;
 static int (*_bind)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) = NULL;
 static int (*_listen)(int sockfds, int backlog) = NULL;
 static int (*_accept)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
-static int (*_fcntl)(int fd, int cmd, ...) = NULL;
-
-int anpCallCounter = 0;
+static int (*_fcntl64)(int fd, int cmd, ...) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
@@ -74,7 +72,6 @@ static int is_socket_supported(int domain, int type, int protocol)
 int socket(int domain, int type, int protocol) {
     printf("CLIENT CALLED: socket: domain=%d, type=%d, protocol=%d\n", domain, type, protocol);
     if (is_socket_supported(domain, type, protocol)) {
-        ++anpCallCounter;
         if((type & SOCK_STREAM) || (type & SOCK_DGRAM)) {
             // TODO: implement your logic here
         struct socket *newSocket = createSocket(domain, type, protocol);
@@ -103,7 +100,6 @@ int connectTest(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
     bool is_anp_sockfd = isFdUsed(sockfd);
     if (is_anp_sockfd)
     {
-        ++anpCallCounter;
         // TODO: implement your logic here
         struct socket *currSocket = getSocketByFd(sockfd);
         if (connectionHead.connectionListHead == NULL)
@@ -136,7 +132,6 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
     bool is_anp_sockfd = isFdUsed(sockfd);
     if (is_anp_sockfd)
     {
-        ++anpCallCounter;
         // return connectTest(sockfd, addr, addrlen);
         // TODO: implement your logic here
         struct socket *currSocket = getSocketByFd(sockfd);
@@ -237,7 +232,6 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         //TODO: implement your logic here
-        ++anpCallCounter;
         // printf("CALL AMOUNT = %d and sock %d\n", anpCallCounter, sockfd);
         
         // return sendTest(sockfd, buf, len, flags);
@@ -269,10 +263,9 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
     printf("CLIENT CALLED: recv: sockfd%d, len=%d\n", sockfd, len);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
-        ++anpCallCounter;
-        // printf("CALL AMOUNT = %d and sock %d\n", anpCallCounter, sockfd);
+        printf("CALL AMOUNT = %d and sock %d\n", len, sockfd);
         //TODO: implement your logic here
-        // printf("recv called clientside\n");
+        // printf("recv called clientside NUMBER %d\n", anpCallCounter);
         struct connection *connection = findConnectionByFd(sockfd);
         if (connection == NULL) {
             printf("error: Socket not found\n");
@@ -285,11 +278,12 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
                 return -1;
             }
             setReadyToRecv(connection, true);
-            // printf("made 1\n");
+            printf("made 1\n");
             int ret = getData(connection, buf, len);
-            // printf("made 2\n");
+            printf("made 2\n");
             // printf("RECEIVED = %d\n", ret);
             setReadyToRecv(connection, false);
+            printf("RECEVED TOTAL %d\n", ret);
             return ret;
         }
         else if(connection->sock->type & SOCK_DGRAM) {
@@ -305,7 +299,6 @@ int close (int sockfd){
     printf("CLIENT CALLED: close: sockf=%d\n", sockfd);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
-        ++anpCallCounter;
         int ret = 0;
         struct connection *toClose = findConnectionByFd(sockfd);
         if(!toClose) {
@@ -323,7 +316,7 @@ int close (int sockfd){
         connectionListRemove(toClose);
 
         free(toClose);
-        // printf("CALL AMOUNT = %d and sock %d\n", anpCallCounter, sockfd);
+        printf("CLOSED SUCCESS %d\n", sockfd);
         return ret;
     }
     // the default path
@@ -498,6 +491,7 @@ ssize_t read(int fd, void *buf, size_t count) {
     // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
         printf("ANP CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
+        // printf("ANP READ NUMBER: %d\n", anpCallCounter);
         return recv(fd, buf, count, 0);
     }
     return _read(fd, buf, count);
@@ -506,7 +500,6 @@ ssize_t read(int fd, void *buf, size_t count) {
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
     printf("CLIENT CALLED: select;\n ");
     if(nfds > ANP_SOCKET_MIN_VAL) {
-        ++anpCallCounter;
         // printf("ANP SELECT\n");
         // sleep(0.1)
         if(readfds != NULL) {
@@ -537,7 +530,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
     int fd = fds->fd;
     printf("CLIENT CALLED: poll %d\n", fd);
     if(isFdUsed(fd)) {
-        sleep(1);
+        // sleep(1);
         int pollEvent = fds->events;
         printf("POLL EVENT %d \n", pollEvent);
         if(pollEvent == 4) { //POLLOUT
@@ -551,7 +544,6 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
             //     fds->revents = 260;
             //     return 1;
             // }
-            printf("THIS ONE 2\n");
             // fds->revents = 200; //curl doesnt like this. 
             fds->revents = 260;
             return 1;
@@ -559,25 +551,39 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
         else if(pollEvent == 1) { //POLLIN
             struct connection *connection = findConnectionByFd(fd);
             if(connection == NULL) {
+                printf("POLL TIMED OUT\n");
+                usleep(timeout);
                 return 0;
             }
             if(!sub_queue_empty(connection->recvPkts)) {
                 fds->revents = 1;
                 return 1;
             }
+            printf("POLL TIMED OUT\n");
+            usleep(timeout);
             return 0;
         }
-        else if(pollEvent == 195) {
+        else if(pollEvent == 195) { //POLLWRNORM | POLLRDBAND | POLLHUP | POLLOUT | POLLIN
             struct connection *connection = findConnectionByFd(fd);
             if(connection == NULL) {
+                printf("POLL TIMED OUT 1\n");
+                usleep(timeout);
                 return 0;
             }
             if(!sub_queue_empty(connection->recvPkts)) {
                 fds->revents = 65;
                 return 1;
             }
+            if(sub_queue_empty(connection->recvPkts)) {
+                printf("ITS EMPTY\n");
+            }
+            printf("POLL TIMED OUT\n");
+            sleep(1);
+            usleep(timeout);
             return 0;
         }
+        printf("POLL TIMED OUT\n");
+        usleep(timeout);
         return 0;
     }
     if(fd = 4) {
@@ -595,7 +601,6 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     printf("CLIENT CALLED: bind; sock%d\n", sockfd);
     if(isFdUsed(sockfd)) {
-        ++anpCallCounter;
         struct socket *sock = getSocketByFd(sockfd);
         struct sockaddr_in *sin = (struct sockaddr_in *)addr;
         sock->srcaddr = ((uint32_t)sin->sin_addr.s_addr); //TODO: maybe i need to use memcpy
@@ -654,24 +659,45 @@ int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrl
 }
 
 int fcntl64(int fd, int cmd, ...) {
-    printf("CLIENT CALLED: fcntl socket %d\n", fd);
+    printf("CLIENT CALLED: fcntl socket %d CMD = %d\n", fd, cmd);
     if(isFdUsed(fd)) {
         // printf("FCNTL HACKED %d\n", cmd);
+        struct socket *sock = getSocketByFd(fd);
 
         if(cmd == 3) { //F_GETFL 
-
+            if(sock->isNonBlocking) {
+                return 2048;
+            }
+            return 0;
         }
-        else if(cmd = 4) { //F_SETFL
+        else if(cmd == 4) { //F_SETFL
             va_list args;
             va_start(args, cmd);
             int flagValue = va_arg(args, int);
 
             printf("FCNTL SET %d\n", flagValue);
+            printf("SOCK %d is noW NON blOCKING\n", fd);
+            
+            sock->isNonBlocking = true;
 
         }
         return 0;
     }
+
     printf("FCNTL NOT HACKED\n");
+    va_list args;
+    va_start(args, cmd);
+    int result = 0;
+    if(cmd == 4) {
+        int flagValue = va_arg(args, int);
+        result = _fcntl64(fd, cmd, flagValue);
+    }
+    else {
+        result = _fcntl64(fd, cmd, args);
+    }
+    // va_end(args);
+    // printf("FCNTL RESULT %d %s\n", result, strerror(errno));
+    return result;
     return 0;
     
 }
@@ -690,7 +716,7 @@ void _function_override_init()
     _getsockopt = dlsym(RTLD_NEXT, "getsockopt");
     _sendto = dlsym(RTLD_NEXT, "sendto");
     _recvfrom = dlsym(RTLD_NEXT, "recvfrom");
-    _fcntl = dlsym(RTLD_NEXT, "fcntl");
+    _fcntl64 = dlsym(RTLD_NEXT, "fcntl64");
     _getpeername = dlsym(RTLD_NEXT, "getpeername");
     _write = dlsym(RTLD_NEXT, "write");
     _read = dlsym(RTLD_NEXT, "read");

@@ -13,6 +13,7 @@ struct socket {
     int protocol;
     int fd;
     int backlog;
+    bool isNonBlocking;
     bool isPassive;
     struct connection *pendingC;
     uint32_t srcaddr;
