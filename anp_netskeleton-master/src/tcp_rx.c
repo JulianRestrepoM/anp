@@ -88,14 +88,13 @@ int handleAck(struct subuff *sub) {
     uint32_t ackNum = ntohl(hdr->tcpAckNum);
     struct connection *incomingConnection = findConnectionBySeqNum(ackNum);
 
-
     if((incomingConnection != NULL) && (getWaitingForAck(incomingConnection) == true)) {
         setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
         setWaitingForAck(incomingConnection, false);
 
-        pthread_mutex_lock(&incomingConnection->connectionLock);
-        pthread_cond_signal(&incomingConnection->ackRecv);
-        pthread_mutex_unlock(&incomingConnection->connectionLock);
+        // pthread_mutex_lock(&incomingConnection->connectionLock);
+        // pthread_cond_signal(&incomingConnection->ackRecv);
+        // pthread_mutex_unlock(&incomingConnection->connectionLock);
         return 0;
     }
     else if(incomingConnection == NULL) {

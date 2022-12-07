@@ -146,7 +146,7 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
             ret = sending->len;
         }
         else {
-            ret = ip_output(connection->sock->dstaddr, sending);
+            ret = ip_output(connection->sock->dstaddr, sending)-54; //tcp header size 54 != TCP_HDR_LEN
             if(ret < 0) {
                 return ret;
             }

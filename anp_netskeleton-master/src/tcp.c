@@ -243,6 +243,14 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
     struct iphdr *ipHdr;
     size_t currentSize;
 
+    // if(connection->sock->isNonBlocking && len < connection->buffedAmount) {
+    //     printf("NOT blOCKED A\n");
+    //             errno = EAGAIN;
+    //             // printf("Q LENgth get nodata %ld\n", sub_queue_len(connection->recvPkts));
+    //             return -1;
+    //             return lenRecv; //prob should also return errnos
+    // }
+
     while(lenRecv < len) {
         
         // pthread_mutex_lock(&connection->connectionLock);
@@ -292,7 +300,7 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                 printf("NOT blOCKED\n");
                 errno = EAGAIN;
                 // printf("Q LENgth get nodata %ld\n", sub_queue_len(connection->recvPkts));
-                return -1;
+                // return -1;
                 return lenRecv; //prob should also return errnos
             }
             printf("blOCKED\n");

@@ -245,7 +245,10 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
                 printf("error: connection not in ESTABLISHED state\n");
                 return -1;
             }
-            return sendTcpData(connection, buf, len)-54; //tcp segment size
+            ssize_t result =sendTcpData(connection, buf, len);
+            printf("sent %d\n", result);
+            return result;
+            // return sendTcpData(connection, buf, len)-54; //tcp segment size
         }
         else if(connection->sock->type & SOCK_DGRAM) {
             return sendUdpData(connection, buf, len);
@@ -253,6 +256,9 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags)
         
     }
     // the default path
+    ssize_t result = _send(sockfd, buf, len, flags);
+    printf("sent %d\n", result);
+    return result;
     return _send(sockfd, buf, len, flags);
 }
 
@@ -316,7 +322,7 @@ int close (int sockfd){
         connectionListRemove(toClose);
 
         free(toClose);
-        printf("CLOSED SUCCESS %d\n", sockfd);
+        printf("CLOSED SUCCESS %d result %d\n", sockfd, ret);
         return ret;
     }
     // the default path
@@ -353,7 +359,19 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 }
 
 ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) {
-    printf("CLIENT CALLED: recvfrom; fd=%d\n", sockfd);
+    printf("CLIENT CALLED: recvfrom; fd=%d wants %d\n", sockfd, len);
+    // char fake[len];
+    // ssize_t result = _recvfrom(sockfd, fake, len, flags, src_addr, addrlen);
+    // for(int i = 0; i <=result; i++) {
+    //     printf("%c", fake[i]);
+    // }
+    // printf("\n");
+    // memset(fake, 0, len);
+    // memcpy(buf, fake, len);
+
+    // // ssize_t result = _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+    // // printf("THE RESULT IT RECVD %d\n", result);
+    // return result;
     return _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
 }
 
@@ -532,7 +550,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
     if(isFdUsed(fd)) {
         // sleep(1);
         int pollEvent = fds->events;
-        printf("POLL EVENT %d \n", pollEvent);
+        // printf("POLL EVENT %d \n", pollEvent);
         if(pollEvent == 4) { //POLLOUT
             fds->revents = 4;
             return 1;
@@ -587,9 +605,9 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
         return 0;
     }
     if(fd = 4) {
-        printf("POLL EVENT %d \n", fds->events);
+        // printf("POLL EVENT %d \n", fds->events);
         int result = _poll(fds, nfds, timeout);
-        printf("POLL RESULT %d and return %d\n", fds->revents, result);
+        // printf("POLL RESULT %d and return %d\n", fds->revents, result);
         return result;
     }
     
