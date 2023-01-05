@@ -52,13 +52,16 @@ static int (*_bind)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) 
 static int (*_listen)(int sockfds, int backlog) = NULL;
 static int (*_accept)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 static int (*_fcntl64)(int fd, int cmd, ...) = NULL;
+static int (*___poll)(struct pollfd *fds, nfds_t nfds, int timeout) = NULL;
+static ssize_t (*_sendmsg)(int sockfd, const struct msghdr *msg, int flags) = NULL;
+static int(*___sendmmsg)(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
     if (domain != AF_INET){
         return 0;
     }
-    if (!(type & SOCK_STREAM) /*&& !(type & SOCK_DGRAM)*/) { //uncomment to support UDP
+    if (!(type & SOCK_STREAM) && !(type & SOCK_DGRAM)) { //uncomment to support UDP
         return 0;
     }
     if (protocol != 0 && protocol != IPPROTO_TCP) {
@@ -76,11 +79,12 @@ int socket(int domain, int type, int protocol) {
             // TODO: implement your logic here
         struct socket *newSocket = createSocket(domain, type, protocol);
         printf("ANP SOCKET %d\n", newSocket->fd);
-        return newSocket->fd;
-        }
         if(type & SOCK_DGRAM) {
             printf("ANP UDP SOCKET\n");
         }
+        return newSocket->fd;
+        }
+        
         // int sock = _socket(domain, type, protocol);
         // printf("TCP SOCK %d\n", sock);
         // return sock;
@@ -148,11 +152,16 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
             return -1;
         }
         currSocket->dstaddr = ntohl((uint32_t)sin->sin_addr.s_addr);
+        // currSocket->dstaddr = 3232235521; //hardcoded dns
+        // currSocket->dstaddr = 167772165;
+        printf("DSTADRESS = %ld\n", currSocket->dstaddr);
         currSocket->dstaddrlen = addrlen;
         currSocket->srcport = genRandomPort();
         // if(currSocket->srcaddr == 0) {
             currSocket->srcaddr = SRC_ADDR;
         // }
+
+        // printf("SING PORT  %d lenght %d\n", sin->sin_addr);
         
         memcpy(&currSocket->dstport, &sin->sin_port, sizeof(sin->sin_port));
         printf("DESTINATION PORT = %d\n", currSocket->dstport);
@@ -167,7 +176,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         struct socket *dstSock = getSocketByPort(htons(currSocket->dstport));
 
         if(dstSock) {
-            printf("ITS LOCAL\n");
+            printf("ITS LOCAL connecting to sock %d\n", dstSock->fd);
             // dstConnection->isLocalConnection == true; //might need to use locks for this
             // currConnection->isLocalConnection == true;
             // setIsLocal(dstConnection, true);
@@ -190,11 +199,13 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
             return 0;
         }
         else {
-            printf("UDP CONNECT\n");
+            printf("UDP CONNECT sock %d\n", sockfd);
             return 0;
         }
     }
     // the default path
+    struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+    printf("CONNECT TO ADDRESS %ld\n", ntohl((uint32_t)sin->sin_addr.s_addr));
     return _connect(sockfd, addr, addrlen);
 }
 
@@ -303,6 +314,7 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
 int close (int sockfd){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
     printf("CLIENT CALLED: close: sockf=%d\n", sockfd);
+    sleep(10);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         int ret = 0;
@@ -550,7 +562,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
     if(isFdUsed(fd)) {
         // sleep(1);
         int pollEvent = fds->events;
-        // printf("POLL EVENT %d \n", pollEvent);
+        printf("POLL EVENT %d \n", pollEvent);
         if(pollEvent == 4) { //POLLOUT
             fds->revents = 4;
             return 1;
@@ -614,6 +626,18 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
 
 
     return _poll(fds, nfds, timeout);
+}
+
+int __poll(struct pollfd *fds, nfds_t nfds, int timeout) { //wget
+    printf("CLIENT CALLED: __poll\n");
+    int fd = fds->fd;
+    if(isFdUsed(fd)) {
+        return poll(fds, nfds, timeout);
+    }
+    return ___poll(fds, nfds, timeout);
+    
+
+    
 }
 
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
@@ -720,6 +744,37 @@ int fcntl64(int fd, int cmd, ...) {
     
 }
 
+ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags) {
+    printf("CLIENT CALLED: sendmsg %d\n", sockfd);
+    return _sendmsg(sockfd, msg, flags);
+}
+
+int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags) {
+    printf("CLIENT CALLED: sendmmsg (Multiple) %d falgs %d\n", sockfd, flags);
+    if(isFdUsed(sockfd)) {   
+        printf("vlen = %d\n", vlen);
+        for(int i = 0; i < vlen; i++) {
+            if(msgvec->msg_hdr.msg_iovlen > 1) {
+                printf("OH OH, I need to implement it\n");
+                sleep(5);
+                return -1;
+            }
+            msgvec->msg_len = send(sockfd, msgvec->msg_hdr.msg_iov->iov_base, msgvec->msg_hdr.msg_iov->iov_len, 0)-42;
+            // printf("NAME MESSAGE = %ld\n", msgvec->msg_hdr.msg_control);
+            msgvec++;
+        }
+        // printf("sendmsg total = %d\n", sendResult);
+        return vlen;
+        // return send(sockfd, msgvec->msg_hdr.msg_iov, msgvec->msg_hdr.msg_iov->iov_len, 0);
+
+
+        
+    }
+    int result = ___sendmmsg(sockfd, msgvec, vlen, flags);
+    printf("sendmmsg result = %d and %ld\n", result, msgvec->msg_len);
+    return result;
+    // return ___sendmmsg(sockfd, msgvec, vlen, flags);
+}
 
 
 void _function_override_init()
@@ -734,7 +789,6 @@ void _function_override_init()
     _getsockopt = dlsym(RTLD_NEXT, "getsockopt");
     _sendto = dlsym(RTLD_NEXT, "sendto");
     _recvfrom = dlsym(RTLD_NEXT, "recvfrom");
-    _fcntl64 = dlsym(RTLD_NEXT, "fcntl64");
     _getpeername = dlsym(RTLD_NEXT, "getpeername");
     _write = dlsym(RTLD_NEXT, "write");
     _read = dlsym(RTLD_NEXT, "read");
@@ -742,8 +796,11 @@ void _function_override_init()
     _getsockname = dlsym(RTLD_NEXT, "getsockname");
    void *hndpoll = dlopen("libc.so.6",RTLD_LAZY);
     _poll = dlsym(hndpoll, "poll");
+    ___poll = dlsym(RTLD_NEXT, "__poll");
     _bind = dlsym(RTLD_NEXT, "bind");
     _listen = dlsym(RTLD_NEXT, "listen");
     _accept = dlsym(RTLD_NEXT, "accept");
-
+    _fcntl64 = dlsym(RTLD_NEXT, "fcntl64");
+    _sendmsg = dlsym(RTLD_NEXT, "sendmsg");
+    ___sendmmsg = dlsym(RTLD_NEXT, "__sendmmsg");
 }

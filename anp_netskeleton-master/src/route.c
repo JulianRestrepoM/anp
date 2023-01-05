@@ -65,11 +65,15 @@ struct rtentry *route_lookup(uint32_t daddr)
 {
     struct list_head *item;
     struct rtentry *rt = NULL;
+    int i = 0;
     list_for_each(item, &routes) {
         rt = list_entry(item, struct rtentry, list);
         if ((daddr & rt->netmask) == (rt->dst & rt->netmask)) break;
         // If no matches, we default to to default gw (last item)
+        // if(i == 3) break;
+        i++;
     }
+    printf("routing through interface %d\n",i);
     return rt;
 }
 

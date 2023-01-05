@@ -57,8 +57,8 @@ static int process_arp_entry(struct arp_hdr *hdr, struct arp_ipv4 *data){
     memcpy(&entry->arpIpv4, data, sizeof(*data));
     list_add_tail(&entry->list, &arp_cache);
     u32_ip_to_str("[ARP] A new entry for", data->src_ip);
-    // debug_arp_payload("original ", data);
-    // debug_arp_payload("saved ", (&(entry->arpIpv4)));
+    debug_arp_payload("original ", data);
+    debug_arp_payload("saved ", (&(entry->arpIpv4)));
     return 0;
 }
 
@@ -147,17 +147,17 @@ int arp_request(uint32_t src_ip, uint32_t dst_ip, struct anp_netdev *netdev)
     // push again to get to the ARP header
     arp = (struct arp_hdr *) sub_push(sub, ARP_HDR_LEN);
 
-    // debug_arp("req", arp);
+    debug_arp("req", arp);
     arp->opcode = htons(ARP_REQUEST);
     arp->hwtype = htons(ARP_ETHERNET);
     arp->protype = htons(ETH_P_IP);
     arp->hwsize = netdev->addr_len;
     arp->prosize = 4;
 
-    // debug_arp_payload("req", payload);
+    debug_arp_payload("req", payload);
     payload->src_ip = htonl(payload->src_ip);
     payload->dst_ip = htonl(payload->dst_ip);
-
+    
     rc = netdev_transmit(sub, broadcast_hw, ETH_P_ARP);
     // synchronous transmission, then free
     free_sub(sub);
@@ -186,12 +186,12 @@ void arp_reply(struct subuff *sub, struct anp_netdev *netdev)
 
     arphdr->opcode = ARP_REPLY;
 
-    // debug_arp("reply", arphdr);
+    debug_arp("reply", arphdr);
     arphdr->opcode = htons(arphdr->opcode);
     arphdr->hwtype = htons(arphdr->hwtype);
     arphdr->protype = htons(arphdr->protype);
 
-    // debug_arp_payload("reply", arpdata);
+    debug_arp_payload("reply", arpdata);
     arpdata->src_ip = htonl(arpdata->src_ip);
     arpdata->dst_ip = htonl(arpdata->dst_ip);
 
@@ -208,15 +208,19 @@ unsigned char* arp_get_hwaddr(uint32_t lookup_ip)
 {
     struct list_head *item;
     struct arp_cache_entry *entry;
+    int i = 0;
     list_for_each(item, &arp_cache) {
+        i++;
         entry = list_entry(item, struct arp_cache_entry, list);
         if (entry->state == ARP_RESOLVED &&
             entry->arpIpv4.src_ip == lookup_ip) {
             uint8_t *copy = (uint8_t *) &entry->arpIpv4.src_mac;
+            // printf("VALUE OF I in success %d\n", i);
             return copy;
         }
     }
     // no entry found
+    printf("VALUE OF I in fail %d\n", i);
     return NULL;
 }
 

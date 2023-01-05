@@ -56,16 +56,17 @@ int sendUdpData(struct connection *connection, const void *buf, size_t len) {
         struct subuff sendingCpy = *sending;
         ret = ip_output(connection->sock->dstaddr, sending);
         if(ret < 0) {
-            printf("ERROR: failed udp send\n");
+            printf("ERROR: failed udp send A with %d\n", ret);
             for(int i = 0; i < 2; i++) {
                 sleep(1);
                 *sending = sendingCpy;
                 ret = ip_output(connection->sock->dstaddr, sending);
                 if(ret >= 0) {
+                    printf("udb subsent\n");
                     goto subSent;
                 }
             }
-            printf("ERROR: failed udp send\n");
+            printf("ERROR: failed udp send B with %d\n", ret);
             return ret;
         }
     
