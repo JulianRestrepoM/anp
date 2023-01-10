@@ -152,8 +152,6 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
             return -1;
         }
         currSocket->dstaddr = ntohl((uint32_t)sin->sin_addr.s_addr);
-        // currSocket->dstaddr = 3232235521; //hardcoded dns
-        // currSocket->dstaddr = 167772165;
         printf("DSTADRESS = %ld\n", currSocket->dstaddr);
         currSocket->dstaddrlen = addrlen;
         currSocket->srcport = genRandomPort();
