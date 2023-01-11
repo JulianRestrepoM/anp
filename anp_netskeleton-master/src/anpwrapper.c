@@ -312,7 +312,6 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
 int close (int sockfd){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
     printf("CLIENT CALLED: close: sockf=%d\n", sockfd);
-    sleep(10);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         int ret = 0;
@@ -532,15 +531,15 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
         // sleep(0.1)
         if(readfds != NULL) {
             // printf("ANP SELECT READ\n");
-            struct connection *connection = findConnectionByFd(sockHead.highestFd);
-            if(!sub_queue_empty(connection->recvPkts)) {
+            struct socket *sock = getSocketByFd(sockHead.highestFd);
+            if(!sub_queue_empty(sock->recvPkts)) {
                 return 1;
             }
-            if(sub_queue_empty(connection->recvPkts)) {
+            if(sub_queue_empty(sock->recvPkts)) {
                 printf("SELECT SLEEPING\n");
                 usleep(timeout->tv_usec);
             } 
-            if(sub_queue_empty(connection->recvPkts)) {
+            if(sub_queue_empty(sock->recvPkts)) {
                 return 0;
             }
         }
@@ -555,6 +554,7 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
 }
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout) { 
+    timeout = timeout * 1000; //so that it sleeps for the right amount in usleep
     int fd = fds->fd;
     printf("CLIENT CALLED: poll %d\n", fd);
     if(isFdUsed(fd)) {
@@ -566,7 +566,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
             return 1;
         }
         else if(pollEvent == 262) { // POLLWRBAND | POLLRDNORM | POLLNVAL | POLLPRI according to bit mask
-            struct connection *connection = findConnectionByFd(fd);
+            struct socket *sock = getSocketByFd(fd);
             // if(!sub_queue_empty(connection->recvPkts)) {
             //     printf("THIS ONE 1\n");
             //     fds->revents = 260;
@@ -577,40 +577,40 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
             return 1;
         }
         else if(pollEvent == 1) { //POLLIN
-            struct connection *connection = findConnectionByFd(fd);
-            if(connection == NULL) {
-                printf("POLL TIMED OUT\n");
-                usleep(timeout);
-                return 0;
-            }
-            if(!sub_queue_empty(connection->recvPkts)) {
-                fds->revents = 1;
-                return 1;
-            }
-            printf("POLL TIMED OUT\n");
-            usleep(timeout);
-            return 0;
-        }
-        else if(pollEvent == 195) { //POLLWRNORM | POLLRDBAND | POLLHUP | POLLOUT | POLLIN
-            struct connection *connection = findConnectionByFd(fd);
-            if(connection == NULL) {
+            struct socket *sock = getSocketByFd(fd);
+            if(sock == NULL) {
                 printf("POLL TIMED OUT 1\n");
                 usleep(timeout);
                 return 0;
             }
-            if(!sub_queue_empty(connection->recvPkts)) {
+            if(!sub_queue_empty(sock->recvPkts)) {
+                fds->revents = 1;
+                return 1;
+            }
+            printf("POLL TIMED OUT 2\n");
+            usleep(timeout);
+            return 0;
+        }
+        else if(pollEvent == 195) { //POLLWRNORM | POLLRDBAND | POLLHUP | POLLOUT | POLLIN
+            struct socket *sock = getSocketByFd(fd);
+            if(sock == NULL) {
+                printf("POLL TIMED OUT 3\n");
+                usleep(timeout);
+                return 0;
+            }
+            if(!sub_queue_empty(sock->recvPkts)) {
                 fds->revents = 65;
                 return 1;
             }
-            if(sub_queue_empty(connection->recvPkts)) {
+            if(sub_queue_empty(sock->recvPkts)) {
                 printf("ITS EMPTY\n");
             }
-            printf("POLL TIMED OUT\n");
+            printf("POLL TIMED OUT 4\n");
             sleep(1);
             usleep(timeout);
             return 0;
         }
-        printf("POLL TIMED OUT\n");
+        printf("POLL TIMED OUT 5\n");
         usleep(timeout);
         return 0;
     }

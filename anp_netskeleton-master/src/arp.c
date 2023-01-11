@@ -147,14 +147,14 @@ int arp_request(uint32_t src_ip, uint32_t dst_ip, struct anp_netdev *netdev)
     // push again to get to the ARP header
     arp = (struct arp_hdr *) sub_push(sub, ARP_HDR_LEN);
 
-    debug_arp("req", arp);
+    // debug_arp("req", arp);
     arp->opcode = htons(ARP_REQUEST);
     arp->hwtype = htons(ARP_ETHERNET);
     arp->protype = htons(ETH_P_IP);
     arp->hwsize = netdev->addr_len;
     arp->prosize = 4;
 
-    debug_arp_payload("req", payload);
+    // debug_arp_payload("req", payload);
     payload->src_ip = htonl(payload->src_ip);
     payload->dst_ip = htonl(payload->dst_ip);
     
@@ -186,12 +186,12 @@ void arp_reply(struct subuff *sub, struct anp_netdev *netdev)
 
     arphdr->opcode = ARP_REPLY;
 
-    debug_arp("reply", arphdr);
+    // debug_arp("reply", arphdr);
     arphdr->opcode = htons(arphdr->opcode);
     arphdr->hwtype = htons(arphdr->hwtype);
     arphdr->protype = htons(arphdr->protype);
 
-    debug_arp_payload("reply", arpdata);
+    // debug_arp_payload("reply", arpdata);
     arpdata->src_ip = htonl(arpdata->src_ip);
     arpdata->dst_ip = htonl(arpdata->dst_ip);
 
@@ -215,12 +215,10 @@ unsigned char* arp_get_hwaddr(uint32_t lookup_ip)
         if (entry->state == ARP_RESOLVED &&
             entry->arpIpv4.src_ip == lookup_ip) {
             uint8_t *copy = (uint8_t *) &entry->arpIpv4.src_mac;
-            // printf("VALUE OF I in success %d\n", i);
             return copy;
         }
     }
     // no entry found
-    printf("VALUE OF I in fail %d\n", i);
     return NULL;
 }
 

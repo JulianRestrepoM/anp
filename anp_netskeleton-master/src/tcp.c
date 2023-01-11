@@ -254,9 +254,9 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
     while(lenRecv < len) {
         
         // pthread_mutex_lock(&connection->connectionLock);
-        if(!sub_queue_empty(connection->recvPkts)) {
-            while(!sub_queue_empty(connection->recvPkts) && lenRecv < len) {
-                current = sub_peek(connection->recvPkts);
+        if(!sub_queue_empty(connection->sock->recvPkts)) {
+            while(!sub_queue_empty(connection->sock->recvPkts) && lenRecv < len) {
+                current = sub_peek(connection->sock->recvPkts);
                 // pthread_mutex_unlock(&connection->connectionLock);
                 ipHdr = IP_HDR_FROM_SUB(current);
 
@@ -276,7 +276,7 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                     lenRecv += currentSize;
                 }
                 if(current->len >= currentSize) {
-                    sub_dequeue(connection->recvPkts);
+                    sub_dequeue(connection->sock->recvPkts);
                     free_sub(current);
                 }
                 else {
@@ -316,9 +316,9 @@ int getDataTest(struct connection *connection, void *buf, size_t len) { //TODO: 
     while(lenRecv < len) {
         
         // pthread_mutex_lock(&connection->connectionLock);
-        if(!sub_queue_empty(connection->recvPkts)) {
-            while(!sub_queue_empty(connection->recvPkts) && lenRecv < len) {
-                current = sub_peek(connection->recvPkts);
+        if(!sub_queue_empty(connection->sock->recvPkts)) {
+            while(!sub_queue_empty(connection->sock->recvPkts) && lenRecv < len) {
+                current = sub_peek(connection->sock->recvPkts);
                 // pthread_mutex_unlock(&connection->connectionLock);
                 ipHdr = IP_HDR_FROM_SUB(current);
 
@@ -338,7 +338,7 @@ int getDataTest(struct connection *connection, void *buf, size_t len) { //TODO: 
                     lenRecv += currentSize;
                 }
                 if(current->len >= currentSize) {
-                    sub_dequeue(connection->recvPkts);
+                    sub_dequeue(connection->sock->recvPkts);
                     free_sub(current);
                 }
                 else {

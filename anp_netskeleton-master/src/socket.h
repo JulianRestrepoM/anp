@@ -2,6 +2,7 @@
 #define ANPNETSTACK_SOCKET_H
 #include "linklist.h"
 #include "systems_headers.h"
+#include "subuff.h"
 
 #define ANP_SOCKET_MIN_VAL 500
 
@@ -22,6 +23,7 @@ struct socket {
     socklen_t srcaddrlen;
     uint16_t dstport;
     uint16_t srcport;
+    struct subuff_head *recvPkts;
 
 };
 

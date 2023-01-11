@@ -32,13 +32,13 @@ struct subuff_head *dataSplitUdp(struct connection *connection, const void *buf,
         hdrToSend->destinationPort = connection->sock->dstport;
         hdrToSend->checksum = 0;
         hdrToSend->length =htons(UDP_HDR_LEN + lenToSend); // make sure this means what i mean it means
-        printf("HDR = %d Payload = %d total = %d\n", UDP_HDR_LEN, lenToSend, UDP_HDR_LEN + lenToSend);
+        // printf("HDR = %d Payload = %d total = %d\n", UDP_HDR_LEN, lenToSend, UDP_HDR_LEN + lenToSend);
        // hdrToSend->checksum = do_tcp_csum((uint8_t*)hdrToSend, UDP_HDR_LEN + lenToSend, IPPROTO_UDP, connection->sock->srcaddr, connection->sock->dstaddr); //make sure this is right
        hdrToSend->checksum = do_tcp_csum((uint8_t *)hdrToSend, UDP_HDR_LEN + lenToSend, IPP_UDP, 
                                         htonl(connection->sock->srcaddr), 
                                         htonl(connection->sock->dstaddr))+htons(6); //find out where im missing this 6
 
-        printf("CHECLSUM IS %hx\n", ntohs(hdrToSend->checksum));
+        // printf("CHECLSUM IS %hx\n", ntohs(hdrToSend->checksum));
         // hdrToSend(":AND NOW %hx\n", )
         lastSentPtr += lenToSend;
 
@@ -84,7 +84,6 @@ int sendUdpData(struct connection *connection, const void *buf, size_t len) {
     return totalSent;
 }
 
-int udpRx(struct subuff *sub) {
-    // printf("Recived UDP packet\n");
-    return 0;
+struct udpHdr *udpHdrFromSub(struct subuff *sub) {
+    return (struct udpHdr *)(sub->head + ETH_HDR_LEN + IP_HDR_LEN);
 }

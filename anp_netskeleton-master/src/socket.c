@@ -17,6 +17,8 @@ struct socket *createSocket(int domain, int type, int protocol) {
     newSocket->srcaddr = 0;
     newSocket->pendingC = NULL;
     newSocket->isNonBlocking = false;
+    newSocket->recvPkts = (struct subuff_head *) malloc(sizeof(struct subuff_head));
+    sub_queue_init(newSocket->recvPkts);
 
     sockListAdd(newSocket);
 

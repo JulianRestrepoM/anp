@@ -26,7 +26,6 @@ struct connection {
     bool synAckRecv2;
     bool waitingForAck;
     bool readyToRecv;
-    struct subuff_head *recvPkts;
     struct list_head list;
     int tcpState;
     struct socket *sock;

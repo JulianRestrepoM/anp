@@ -9,7 +9,6 @@ void initConnectionList() {
 
 struct connection* allocConnection() {
     struct connection *newConnection = (struct connection *) malloc(sizeof(struct connection));
-    newConnection->recvPkts = (struct subuff_head *) malloc(sizeof(struct subuff_head));
     return newConnection;
 }
 
@@ -83,8 +82,6 @@ void addNewConnection(struct connection *newConnection, struct socket *sock) {
     newConnection->waitingForAck = false;
     newConnection->isLocalConnection = false;
     newConnection->synAckRecv2 = false;
-
-    sub_queue_init(newConnection->recvPkts);
 
     pthread_mutex_unlock(&newConnection->connectionLock);
     connectionListAdd(newConnection);
