@@ -61,7 +61,7 @@ static int is_socket_supported(int domain, int type, int protocol)
     if (domain != AF_INET){
         return 0;
     }
-    if (!(type & SOCK_STREAM) /*&& !(type & SOCK_DGRAM)*/) { //uncomment to support UDP
+    if (!(type & SOCK_STREAM) && !(type & SOCK_DGRAM)) { //uncomment to support UDP
         return 0;
     }
     if (protocol != 0 && protocol != IPPROTO_TCP) {
@@ -568,13 +568,11 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
                 printf("POLL TIMED OUT 1\n");
                 return 0;
             }
-            if(timeout < 10) {
-                if(busyWaitingSub(sock->recvPkts, timeout)) {
-                    fds->revents = 1;
-                    return 1;
-                }
+            if(sock->pendingC) {
+                fds->revents = 1;
+                return 1;
             }
-            if(!sub_queue_empty(sock->recvPkts)) {
+            if(busyWaitingSub(sock->recvPkts, timeout)) {
                 fds->revents = 1;
                 return 1;
             }
@@ -658,7 +656,7 @@ int listen(int sockfd, int backlog) {
 }
 
 int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
-    printf("CLIENT CALLED: accept\n");
+    printf("CLIENT CALLED: accept sock %d\n", sockfd);
     if(isFdUsed(sockfd)) {
         struct socket *sock = getSocketByFd(sockfd);
         while(!sock->pendingC) {
