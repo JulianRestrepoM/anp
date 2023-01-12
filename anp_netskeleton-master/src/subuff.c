@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-
+#include<time.h>
 #include "systems_headers.h"
 #include "subuff.h"
 #include "linklist.h"
@@ -61,4 +61,17 @@ struct subuff *alloc_sub(unsigned int size)
     sub->read = 0;
     list_init(&sub->list);
     return sub;
+}
+
+bool busyWaitingSub(const struct subuff_head *list, int timeout) {
+    time_t start = time(NULL);
+    time_t currTime;
+    do {
+        if(!sub_queue_empty(list)) {
+            return true;
+        }
+        time(&currTime);
+        // printf("Elapesed %d\n", currTime - start);
+    } while(currTime - start<= timeout);
+    return 0;
 }

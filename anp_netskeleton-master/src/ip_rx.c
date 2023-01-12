@@ -66,6 +66,7 @@ int ip_rx(struct subuff *sub)
             tcpRx(sub);
             return 0;
         case IPPROTO_UDP:
+            // printf("incoming UDP packet\n");
             udpRx(sub);
             return 0;
         default:

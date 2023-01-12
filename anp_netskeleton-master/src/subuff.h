@@ -54,6 +54,7 @@ uint8_t *sub_push(struct subuff *skb, unsigned int len);
 uint8_t *sub_head(struct subuff *skb);
 void *sub_reserve(struct subuff *skb, unsigned int len);
 void sub_reset_header(struct subuff *skb);
+bool busyWaitingSub(const struct subuff_head *list, int timeout);
 
 static inline uint32_t sub_queue_len(const struct subuff_head *list)
 {

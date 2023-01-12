@@ -61,7 +61,7 @@ static int is_socket_supported(int domain, int type, int protocol)
     if (domain != AF_INET){
         return 0;
     }
-    if (!(type & SOCK_STREAM) && !(type & SOCK_DGRAM)) { //uncomment to support UDP
+    if (!(type & SOCK_STREAM) /*&& !(type & SOCK_DGRAM)*/) { //uncomment to support UDP
         return 0;
     }
     if (protocol != 0 && protocol != IPPROTO_TCP) {
@@ -202,8 +202,8 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         }
     }
     // the default path
-    struct sockaddr_in *sin = (struct sockaddr_in *)addr;
-    printf("CONNECT TO ADDRESS %ld\n", ntohl((uint32_t)sin->sin_addr.s_addr));
+    // struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+    // printf("CONNECT TO ADDRESS %ld\n", ntohl((uint32_t)sin->sin_addr.s_addr));
     return _connect(sockfd, addr, addrlen);
 }
 
@@ -527,21 +527,26 @@ ssize_t read(int fd, void *buf, size_t count) {
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
     printf("CLIENT CALLED: select;\n ");
     if(nfds > ANP_SOCKET_MIN_VAL) {
+        printf("ANP SELECT\n");
         // printf("ANP SELECT\n");
         // sleep(0.1)
         if(readfds != NULL) {
             // printf("ANP SELECT READ\n");
             struct socket *sock = getSocketByFd(sockHead.highestFd);
-            if(!sub_queue_empty(sock->recvPkts)) {
+            // if(!sub_queue_empty(sock->recvPkts)) {
+            //     return 1;
+            // }
+            // if(sub_queue_empty(sock->recvPkts)) {
+            //     printf("SELECT SLEEPING\n");
+            //     usleep(timeout->tv_usec);
+            // } 
+            // if(sub_queue_empty(sock->recvPkts)) {
+            //     return 0;
+            // }
+            if(busyWaitingSub(sock->recvPkts, timeout->tv_sec)) {
                 return 1;
             }
-            if(sub_queue_empty(sock->recvPkts)) {
-                printf("SELECT SLEEPING\n");
-                usleep(timeout->tv_usec);
-            } 
-            if(sub_queue_empty(sock->recvPkts)) {
-                return 0;
-            }
+            return 0;
         }
         printf("ANP SELECT WRITE\n");
         return 1;
@@ -554,10 +559,11 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
 }
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout) { 
-    timeout = timeout * 1000; //so that it sleeps for the right amount in usleep
+    // timeout = timeout * 1000; //so that it sleeps for the right amount in usleep
     int fd = fds->fd;
-    printf("CLIENT CALLED: poll %d\n", fd);
+    // printf("CLIENT CALLED: poll %d timout %d\n", fd, timeout);
     if(isFdUsed(fd)) {
+        printf("ANP POLL\n");
         // sleep(1);
         int pollEvent = fds->events;
         printf("POLL EVENT %d \n", pollEvent);
@@ -583,45 +589,47 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
                 usleep(timeout);
                 return 0;
             }
+            if(timeout < 10) {
+                printf("bussy waiting\n");
+                if(busyWaitingSub(sock->recvPkts, timeout)) {
+                    printf("IT WORKKKED\n");
+                    fds->revents = 1;
+                    return 1;
+                }
+            }
             if(!sub_queue_empty(sock->recvPkts)) {
+                printf("THIS ONE\n");
                 fds->revents = 1;
                 return 1;
             }
             printf("POLL TIMED OUT 2\n");
-            usleep(timeout);
+            // usleep(timeout);
             return 0;
         }
         else if(pollEvent == 195) { //POLLWRNORM | POLLRDBAND | POLLHUP | POLLOUT | POLLIN
             struct socket *sock = getSocketByFd(fd);
             if(sock == NULL) {
                 printf("POLL TIMED OUT 3\n");
-                usleep(timeout);
+                // usleep(timeout);
                 return 0;
             }
-            if(!sub_queue_empty(sock->recvPkts)) {
+            if(busyWaitingSub(sock->recvPkts, timeout)) {
+                printf("THIS ONE 2\n");
                 fds->revents = 65;
                 return 1;
             }
-            if(sub_queue_empty(sock->recvPkts)) {
-                printf("ITS EMPTY\n");
-            }
+            // if(sub_queue_empty(sock->recvPkts)) {
+            //     printf("ITS EMPTY\n");
+            // }
             printf("POLL TIMED OUT 4\n");
-            sleep(1);
-            usleep(timeout);
+            // sleep(1);
+            // usleep(timeout);
             return 0;
         }
         printf("POLL TIMED OUT 5\n");
-        usleep(timeout);
+        // usleep(timeout);
         return 0;
-    }
-    if(fd = 4) {
-        // printf("POLL EVENT %d \n", fds->events);
-        int result = _poll(fds, nfds, timeout);
-        // printf("POLL RESULT %d and return %d\n", fds->revents, result);
-        return result;
-    }
-    
-
+    } 
 
     return _poll(fds, nfds, timeout);
 }
@@ -633,8 +641,6 @@ int __poll(struct pollfd *fds, nfds_t nfds, int timeout) { //wget
         return poll(fds, nfds, timeout);
     }
     return ___poll(fds, nfds, timeout);
-    
-
     
 }
 
