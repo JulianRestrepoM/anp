@@ -28,6 +28,7 @@ struct subuff_head *dataSplitUdp(struct connection *connection, const void *buf,
 int sendUdpData(struct connection *connection, const void *buf, size_t len);
 int udpRx(struct subuff *sub);
 struct udpHdr *udpHdrFromSub(struct subuff *sub);
+int handlePacket(struct subuff *sub, struct socket *sock);
 
 #define UDP_HDR_LEN sizeof(struct udpHdr)
 

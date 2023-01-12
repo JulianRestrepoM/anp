@@ -68,6 +68,9 @@ struct socket *getSocketByFd(int fd) {
 }
 
 struct socket *getSocketByPort(int port) {
+    if(sockHead.listHead == NULL) {
+        return NULL;
+    }
     struct list_head *socketLst;
     struct socket *currSocket;
     list_for_each(socketLst, sockHead.listHead) {
