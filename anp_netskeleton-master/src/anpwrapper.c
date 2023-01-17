@@ -54,7 +54,9 @@ static int (*_accept)(int sockfd, struct sockaddr *restrict addr, socklen_t *res
 static int (*_fcntl64)(int fd, int cmd, ...) = NULL;
 static int (*___poll)(struct pollfd *fds, nfds_t nfds, int timeout) = NULL;
 static ssize_t (*_sendmsg)(int sockfd, const struct msghdr *msg, int flags) = NULL;
-static int(*___sendmmsg)(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags) = NULL;
+static int (*___sendmmsg)(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags) = NULL;
+static int (*_ioctl)(int fd, unsigned long request, ...) = NULL;
+static int (*___close)(int sockfd) = NULL;
 
 static int is_socket_supported(int domain, int type, int protocol)
 {
@@ -381,7 +383,24 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
     // // ssize_t result = _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
     // // printf("THE RESULT IT RECVD %d\n", result);
     // return result;
-    return _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+
+    if(isFdUsed(sockfd)) {
+        printf("ANP recvfrom want %ld\n", len);
+        struct socket *sock = getSocketByFd(sockfd);
+        int result = getUdpData(sock, buf, len, flags, src_addr, addrlen);
+        struct sockaddr_in *sin = (struct sockaddr_in *)src_addr;
+        printf(" RETURN dstport %d dstaddrs %ld, domain %d addressLen %d\n ", sin->sin_port, sin->sin_addr.s_addr, sin->sin_family, *addrlen);
+        printf("recvfrom %d data\n", result);
+        return result;
+
+    }
+
+    // return _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+    int result = _recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+    struct sockaddr_in *sin = (struct sockaddr_in *)src_addr;
+    printf(" RETURN dstport %d dstaddrs %ld, domain %d addressLen %d\n ", sin->sin_port, sin->sin_addr.s_addr, sin->sin_family, addrlen);
+    printf(" RETURN dstport %d dstaddrs %ld, domain %d addressLen %d\n ", sin->sin_port, sin->sin_addr.s_addr, sin->sin_family, *addrlen);
+    return result;
 }
 
 
@@ -572,6 +591,10 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
                 fds->revents = 1;
                 return 1;
             }
+            if(sock->readAmount > 0) {
+                fds->revents = 1;
+                return 1;
+            }
             if(busyWaitingSub(sock->recvPkts, timeout)) {
                 fds->revents = 1;
                 return 1;
@@ -746,6 +769,36 @@ int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)
     // return ___sendmmsg(sockfd, msgvec, vlen, flags);
 }
 
+int ioctl(int fd, unsigned long request, ...) {
+    printf("CLIENT CALLED: ioctl request %ld\n", request);
+    if(isFdUsed(fd)) {
+        printf("ANP ioctl\n");
+        if(request == 21531) { // FIONREAD
+            printf("fionread request\n");
+            va_list args;
+            va_start(args, request);
+            int *theArg = va_arg(args, int *);
+            struct socket *sock = getSocketByFd(fd);
+            *theArg = sock->readAmount;
+            // memcpy(&theArg, &sock->readAmount, sizeof(sock->readAmount));
+            printf("HELLO %d\n", *theArg);
+            return 0;
+        } 
+        return 0;
+    }
+     printf("FCNTL NOT HACKED\n");
+    va_list args;
+    va_start(args, request);
+    void *theArg = va_arg(args, void *);
+    return _ioctl(fd, request, theArg);
+}
+
+int __close (int sockfd) {
+    printf("CLIENT CALLED ___close\n");
+    sleep(5);
+    return 0;
+}
+
 
 void _function_override_init()
 {
@@ -773,4 +826,7 @@ void _function_override_init()
     _fcntl64 = dlsym(RTLD_NEXT, "fcntl64");
     _sendmsg = dlsym(RTLD_NEXT, "sendmsg");
     ___sendmmsg = dlsym(RTLD_NEXT, "__sendmmsg");
+    _ioctl = dlsym(RTLD_NEXT, "ioctl");
+    ___close = dlsym(RTLD_NEXT, "__close");
+
 }

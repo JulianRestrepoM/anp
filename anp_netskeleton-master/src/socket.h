@@ -16,6 +16,7 @@ struct socket {
     int backlog;
     bool isNonBlocking;
     bool isPassive;
+    int readAmount;
     struct connection *pendingC;
     uint32_t srcaddr;
     uint32_t dstaddr;

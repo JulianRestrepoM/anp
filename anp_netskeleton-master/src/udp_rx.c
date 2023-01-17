@@ -15,8 +15,13 @@ int udpRx(struct subuff *sub) {
 
 int handlePacket(struct subuff *sub, struct socket *sock) {
     printf("handlePAkcet\n");
-
     sub_queue_tail(sock->recvPkts, sub);
+
+     struct iphdr *ipHdr = IP_HDR_FROM_SUB(sub);
+     int payload =  IP_PAYLOAD_LEN(ipHdr) - UDP_HDR_LEN;
+     sock->readAmount += payload;
+     
+    
 
     return 0;
 

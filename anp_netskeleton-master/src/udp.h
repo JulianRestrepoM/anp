@@ -29,6 +29,7 @@ int sendUdpData(struct connection *connection, const void *buf, size_t len);
 int udpRx(struct subuff *sub);
 struct udpHdr *udpHdrFromSub(struct subuff *sub);
 int handlePacket(struct subuff *sub, struct socket *sock);
+int getUdpData(struct socket *sock, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
 
 #define UDP_HDR_LEN sizeof(struct udpHdr)
 
