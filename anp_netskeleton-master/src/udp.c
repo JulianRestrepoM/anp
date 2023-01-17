@@ -118,41 +118,19 @@ int getUdpData(struct socket *sock, void *buf, size_t len, int flags, struct soc
         }
     }
 
-    // while(lenRecv < len) {
-        // printf("still need %d\n", len-lenRecv);
-        if(!sub_queue_empty(sock->recvPkts)) {
-            while(!sub_queue_empty(sock->recvPkts) && lenRecv < len) {
-                current = sub_peek(sock->recvPkts);
-                ipHdr = IP_HDR_FROM_SUB(current);
+    if(!sub_queue_empty(sock->recvPkts)) {
+        current = sub_dequeue(sock->recvPkts);
+        ipHdr = IP_HDR_FROM_SUB(current);
 
-                //TODO: it seems to only save max 536 at a time. and overwrites first half of packet larger
-                currentSize = IP_PAYLOAD_LEN(ipHdr) - UDP_HDR_LEN - current->read;
-                void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + UDP_HDR_LEN + current->read;
-                void *dest = buf + lenRecv;
-                 
-                
-                if((currentSize + lenRecv) > len ) {
-                    currentSize = len -lenRecv;
-                    lenRecv += currentSize;
-                    memcpy(dest, src, currentSize);
-                }
-                else {
-                    memcpy(dest, src, currentSize);
-                    lenRecv += currentSize;
-                }
-                if(current->len >= currentSize) {
-                    sub_dequeue(sock->recvPkts);
-                    free_sub(current);
-                }
-                else {
-                    int read = current->read;
-                    read += currentSize;
-                    current->read = read;
-                }
-                    
-            }
-        }
-    // }
+        currentSize = IP_PAYLOAD_LEN(ipHdr) - UDP_HDR_LEN - current->read;
+        void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + UDP_HDR_LEN + current->read;
+        void *dest = buf + lenRecv;
+        // currentSize = len -lenRecv;
+
+        lenRecv += currentSize;
+        memcpy(dest, src, currentSize);
+    }
+
     struct sockaddr_in *sin = (struct sockaddr_in *)src_addr;
     printf(" AFTER dstport %d dstaddrs %ld, domain %d addressLen %d\n ", sin->sin_port, sin->sin_addr.s_addr, sin->sin_family, addrlen);
     sock->readAmount -= lenRecv;
