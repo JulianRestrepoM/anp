@@ -32,11 +32,12 @@ struct subuff_head *dataSplitUdp(struct connection *connection, const void *buf,
         hdrToSend->destinationPort = connection->sock->dstport;
         hdrToSend->checksum = 0;
         hdrToSend->length =htons(UDP_HDR_LEN + lenToSend); // make sure this means what i mean it means
+        hdrToSend->checksum = 0;
         // printf("HDR = %d Payload = %d total = %d\n", UDP_HDR_LEN, lenToSend, UDP_HDR_LEN + lenToSend);
        // hdrToSend->checksum = do_tcp_csum((uint8_t*)hdrToSend, UDP_HDR_LEN + lenToSend, IPPROTO_UDP, connection->sock->srcaddr, connection->sock->dstaddr); //make sure this is right
-       hdrToSend->checksum = do_tcp_csum((uint8_t *)hdrToSend, UDP_HDR_LEN + lenToSend, IPP_UDP, 
-                                        htonl(connection->sock->srcaddr), 
-                                        htonl(connection->sock->dstaddr))+htons(6); //find out where im missing this 6
+    //    hdrToSend->checksum = do_tcp_csum((uint16_t *)hdrToSend, UDP_HDR_LEN + lenToSend, IPP_UDP, 
+    //                                     htonl(connection->sock->srcaddr), 
+    //                                     htonl(connection->sock->dstaddr))+htons(6); //find out where im missing this 6
 
         // printf("CHECLSUM IS %hx\n", ntohs(hdrToSend->checksum));
         // hdrToSend(":AND NOW %hx\n", )
@@ -65,7 +66,7 @@ int sendUdpData(struct connection *connection, const void *buf, size_t len) {
         if(ret < 0) {
             printf("ERROR: failed udp send A with %d\n", ret);
             for(int i = 0; i < 2; i++) {
-                sleep(1);
+                // sleep(1);
                 *sending = sendingCpy;
                 ret = ip_output(connection->sock->dstaddr, sending);
                 if(ret >= 0) {

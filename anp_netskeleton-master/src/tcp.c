@@ -128,6 +128,19 @@ void waitForSynAck(struct connection *connection) {
 }
 
 int waitForAck(struct connection *connection) {
+    if(!connection->isLocalConnection) {
+        time_t start = time(NULL);
+        time_t currTime;
+        int timeout = 1;
+        do {
+            if(!connection->waitingForAck) {
+                return 0;
+            }
+            time(&currTime);
+            // printf("Elapesed %d\n", currTime - start);
+        } while(currTime - start<= timeout);
+        return -1;
+    }
     struct timespec timeToWait = {0,0};
     int now = clock_gettime(CLOCK_REALTIME, &timeToWait);
 
@@ -299,11 +312,13 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                 errno = EAGAIN;
                 // printf("Q LENgth get nodata %ld\n", sub_queue_len(connection->recvPkts));
                 // return -1;
+                connection->sock->readAmount -= lenRecv;
                 return lenRecv; //prob should also return errnos
             }
         }
     }
     // printf("Q LENgth get data %ld\n", sub_queue_len(connection->recvPkts));
+    connection->sock->readAmount -= lenRecv;
     return lenRecv;
 }
 

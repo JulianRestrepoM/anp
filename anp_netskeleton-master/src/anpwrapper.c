@@ -161,7 +161,6 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
             currSocket->srcaddr = SRC_ADDR;
         // }
 
-        // printf("SING PORT  %d lenght %d\n", sin->sin_addr);
         
         memcpy(&currSocket->dstport, &sin->sin_port, sizeof(sin->sin_port));
         printf("DESTINATION PORT = %d\n", currSocket->dstport);
@@ -313,7 +312,7 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
 
 int close (int sockfd){
     //FIXME -- you can remember the file descriptors that you have generated in the socket call and match them here
-    printf("CLIENT CALLED: close: sockf=%d\n", sockfd);
+    // printf("CLIENT CALLED: close: sockf=\n", sockfd); //speedtest doesnt like this print
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         int ret = 0;
@@ -358,10 +357,42 @@ int getsockopt(int sockfd, int level, int optname, void *restrict optval, sockle
         // int *optvalResult = (int*)optval;
         // optvalResult = 0;
         // optval = optvalResult;
-        return 0;
+        // return 0;
+        //  _getsockopt(sockfd, level, optname, optval, optlen);
+
+        if(level == SOL_SOCKET) {
+            if(optname == SO_TYPE) {
+                int *optvalResult = (int*)optval;
+                *optvalResult = SOCK_STREAM;
+                
+                // optlen = sizeof(SOCK_STREAM);
+                return 0;
+            }
+            if(optname == SO_ERROR) {
+                return 0;
+            }
+            else {
+                printf("getsockopt unsupported optname\n");
+                _getsockopt(sockfd, level, optname, optval, optlen);
+                exit(-1);
+            }
+        }
+        else{
+            printf("getsockopt unsupported level\n");
+            _getsockopt(sockfd, level, optname, optval, optlen);
+            exit(-1);
+        }
+         exit(0);
 
     }
+
+    // if(optname == SO_TYPE) {
+    //     _getsockopt(sockfd, level, optname, optval, optlen);
+    //     exit(0);
+    // }
+
     return _getsockopt(sockfd, level, optname, optval, optlen);
+    
 }
 
 ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) {
@@ -544,10 +575,10 @@ ssize_t read(int fd, void *buf, size_t count) {
 }
 
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
-    printf("CLIENT CALLED: select;\n ");
+    // printf("CLIENT CALLED: select; \n ");
     if(nfds > ANP_SOCKET_MIN_VAL) {
         if(readfds != NULL) {
-            // printf("ANP SELECT READ\n");
+            printf("ANP SELECT READ\n");
             struct socket *sock = getSocketByFd(sockHead.highestFd);
             if(busyWaitingSub(sock->recvPkts, timeout->tv_sec)) {
                 return 1;
@@ -557,6 +588,7 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
         printf("ANP SELECT WRITE\n");
         return 1;
     }
+    // printf("NOT HACKED Select %d\n", nfds);
     return _select(nfds, readfds, writefds, exceptfds, timeout);
 }
 
@@ -749,8 +781,7 @@ int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)
         for(int i = 0; i < vlen; i++) {
             if(msgvec->msg_hdr.msg_iovlen > 1) {
                 printf("OH OH, I need to implement it\n");
-                sleep(5);
-                return -1;
+                exit(-1);
             }
             msgvec->msg_len = send(sockfd, msgvec->msg_hdr.msg_iov->iov_base, msgvec->msg_hdr.msg_iov->iov_len, 0)-42;
             // printf("NAME MESSAGE = %ld\n", msgvec->msg_hdr.msg_control);
@@ -770,7 +801,7 @@ int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)
 }
 
 int ioctl(int fd, unsigned long request, ...) {
-    printf("CLIENT CALLED: ioctl request %ld\n", request);
+    printf("CLIENT CALLED: ioctl request %ld sock %d\n", request, fd);
     if(isFdUsed(fd)) {
         printf("ANP ioctl\n");
         if(request == 21531) { // FIONREAD
@@ -784,6 +815,16 @@ int ioctl(int fd, unsigned long request, ...) {
             printf("HELLO %d\n", *theArg);
             return 0;
         } 
+        if(request == 21537) { //FIONBIO
+            printf("fionbio request\n");
+            struct socket *sock = getSocketByFd(fd);
+            sock->isNonBlocking = true;
+            return 0;
+        }
+        else{
+            printf("request %ld not implemented\n", request);
+            exit(-1);
+        }
         return 0;
     }
      printf("FCNTL NOT HACKED\n");
@@ -795,7 +836,6 @@ int ioctl(int fd, unsigned long request, ...) {
 
 int __close (int sockfd) {
     printf("CLIENT CALLED ___close\n");
-    sleep(5);
     return 0;
 }
 
