@@ -57,6 +57,9 @@ bool isFdUsed(int fd) {
 }
 
 struct socket *getSocketByFd(int fd) {
+    if(sockHead.listHead == NULL) {
+        return NULL;
+    }
     struct list_head *theFd;
     struct socket *currSocket;
     list_for_each(theFd, sockHead.listHead) {

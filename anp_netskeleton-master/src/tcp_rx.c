@@ -23,6 +23,11 @@ int tcpRx(struct subuff *sub) {
         printf("GOT SYN\n");
         handleSyn(sub);
     }
+    else {
+        printf("RECIEVD UNSUPORTED TCP\n");
+        free_sub(sub);
+        return -1;
+    }
 }
 
 int handleSyn(struct subuff *sub) {
@@ -102,7 +107,6 @@ int handleAck(struct subuff *sub) {
         if(incomingConnection != NULL) {
             return handleFinAck(sub);
         }
-        // printf("ITS HEREEEEE\n");
         incomingConnection = findConnectionbyPort((hdr->tcpDest)); //fixes some packages getting dropped accidnetly because it could not find by seqnum. 
         
         if(incomingConnection != NULL && (getLastRecvSeq(incomingConnection) == ntohl(hdr->tcpSeqNum))) {
@@ -113,10 +117,7 @@ int handleAck(struct subuff *sub) {
         goto dropPkt;
     }
     else {
-        if(getLastRecvSeq(incomingConnection) == ntohl(hdr->tcpSeqNum)) {
-            return handleRecv(incomingConnection, sub, hdr);
-        }
-        
+        return handleRecv(incomingConnection, sub, hdr); 
     }
     dropPkt:
     free_sub(sub);
@@ -124,6 +125,7 @@ int handleAck(struct subuff *sub) {
 }
 
 int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct tcpHdr *hdr) {
+    printf("Loading sub\n");
     struct iphdr *ipHdr = IP_HDR_FROM_SUB(sub);
     size_t currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
     
@@ -144,6 +146,7 @@ int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct
                 }
 
     // pthread_mutex_unlock(&incomingConnection->connectionLock);
+    printf("loaded sub\n");
    
     return 0;
 }
@@ -188,15 +191,14 @@ int handleFinAck(struct subuff *sub) {
         //TODO:: Im not taking into account of the server initializing the F flag
         if((incomingConnection = findConnectionBySeqNum(ackNum)) != NULL) { //TODO: Actually having this work properlly is probably important lol
             printf("SERVER CLOSING\n");
-            // setState(incomingConnection, CLOSE_WAIT);
-            // // sendAck(incomingConnection, getLastRecvSeq(incomingConnection) + 1);
-            // sendFin(incomingConnection);
-            // setState(incomingConnection, LAST_ACK);
+            setState(incomingConnection, CLOSE_WAIT);
+            sendAck(incomingConnection, getLastRecvSeq(incomingConnection) + 1);
+            sendFin(incomingConnection);
+            setState(incomingConnection, LAST_ACK);
             // close(incomingConnection->sock->fd);
             free_sub(sub);
             return 0;
         }
-        printf("THIS ONE 2\n"); 
         printf("Connection not found, invalid ACK\n");
         goto dropPkt;
     }
@@ -204,9 +206,7 @@ int handleFinAck(struct subuff *sub) {
         printf("already received this\n");
         goto dropPkt;
     }
-
     setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
-
     pthread_mutex_lock(&incomingConnection->connectionLock);
     pthread_cond_signal(&incomingConnection->finAckRecv);
     pthread_mutex_unlock(&incomingConnection->connectionLock);

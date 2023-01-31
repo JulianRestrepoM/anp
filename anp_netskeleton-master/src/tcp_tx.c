@@ -12,7 +12,7 @@ int sendSyn(struct connection *connection) {
     int tries  = 3;
 
     while((ipOutputResult == -11) && (tries != 0)) {
-        // sleep(1);
+        sleep(1);
         sub = makeSynSub(connection);
         ipOutputResult = ip_output(connection->sock->dstaddr, sub);
         tries--;
@@ -35,7 +35,7 @@ int sendSynAck(struct connection *connection) {
     int tries  = 3;
 
     while((ipOutputResult == -11) && (tries != 0)) {
-        // sleep(1);
+        sleep(1);
         sub = makeSynAckSub(connection);
         ipOutputResult = ip_output(connection->sock->dstaddr, sub);
         tries--;

@@ -288,11 +288,11 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
         }
         if (connection->sock->type & SOCK_STREAM)
         {
-            if (getState(connection) != ESTABLISHED)
-            {
-                printf("error: connection not in ESTABLISHED state\n");
-                return -1;
-            }
+            // if (getState(connection) != ESTABLISHED)
+            // {
+            //     printf("error: connection not in ESTABLISHED state 1\n");
+            //     return -1;
+            // }
             setReadyToRecv(connection, true);
             printf("made 1\n");
             int ret = getData(connection, buf, len);

@@ -13,6 +13,9 @@ struct connection* allocConnection() {
 }
 
 struct connection* findConnectionbyPort(uint16_t port)  {
+    if(connectionHead.connectionListHead == NULL) {
+        return NULL;
+    }
     struct list_head *item;
     struct connection *entry;
     list_for_each(item, connectionHead.connectionListHead) {
@@ -28,6 +31,9 @@ struct connection* findConnectionbyPort(uint16_t port)  {
 }
 
 struct connection* findConnectionByFd(int fd) {
+    if(connectionHead.connectionListHead == NULL) {
+        return NULL;
+    }
     struct list_head *item;
     struct connection *entry;
     list_for_each(item, connectionHead.connectionListHead) {
@@ -53,6 +59,9 @@ void connectionListRemove(struct connection *newConnection) {
 }
 
 struct connection* findConnectionBySeqNum(uint32_t num) {
+    if(connectionHead.connectionListHead == NULL) {
+        return NULL;
+    }
     struct list_head *item;
     struct connection *entry;
     list_for_each(item, connectionHead.connectionListHead) {

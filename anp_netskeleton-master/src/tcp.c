@@ -107,6 +107,19 @@ struct subuff *makeFinSub(struct connection *connection) {
 }
 
 void waitForSynAck(struct connection *connection) {
+    if(!connection->isLocalConnection) {
+        time_t start = time(NULL);
+        time_t currTime;
+        int timeout = 1;
+        do {
+            if(getSynAckRecv2(connection)) {
+                return ;
+            }
+            time(&currTime);
+            // printf("Elapesed %d\n", currTime - start);
+        } while(currTime - start<= timeout);
+        return ;
+    }
     struct timespec timeToWait = {0,0};
     int now = clock_gettime(CLOCK_REALTIME, &timeToWait);
 
