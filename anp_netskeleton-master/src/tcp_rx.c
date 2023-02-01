@@ -131,9 +131,9 @@ int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct
     
     setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum) + currentSize);
 
-    pthread_mutex_lock(&incomingConnection->connectionLock);
+    // pthread_mutex_lock(&incomingConnection->connectionLock);
     sub_queue_tail(incomingConnection->sock->recvPkts, sub);
-    pthread_mutex_unlock(&incomingConnection->connectionLock);
+    // pthread_mutex_unlock(&incomingConnection->connectionLock);
     incomingConnection->sock->readAmount += currentSize;
 
     uint32_t lastSeq = getLastRecvSeq(incomingConnection);

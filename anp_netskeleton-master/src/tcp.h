@@ -31,10 +31,35 @@ struct tcpHdr {
     uint8_t tcpData[];
 } __attribute__((packed));
 
+struct tcpHdrwOptions {
+    uint16_t tcpSource;
+    uint16_t tcpDest;
+    uint32_t tcpSeqNum;
+    uint32_t tcpAckNum;
+    uint8_t tcpResPad1:4,
+            tcpLen:4,
+            tcpFin:1,
+            tcpSyn:1,
+            tcpRst:1,
+            tcpPsh:1,
+            tcpAck:1,
+            tcpUrg:1,
+            tcpResPad2:2;
+    uint16_t tcpWinSize;
+    uint16_t tcpChecksum;
+    uint16_t tcpUrgentPointer;
+    uint8_t kind;
+    uint8_t length;
+    uint16_t mss;
+    uint8_t tcpData[];
+    
+} __attribute__((packed));
+
 struct tcpHdr *tcpHdrFromSub(struct subuff *sub);
 int sendSyn(struct connection *connection);
 int sendSynAck(struct connection *connection);
 struct subuff *allocTcpSub(int dataLen);
+struct subuff *allocTcpSubwOptions(int dataLen);
 struct subuff *makeSynSub(struct connection *connection);
 struct subuff *makeSynAckSub(struct connection *connection);
 void setSynOptionsTcpHdr(struct subuff *sub, struct connection *connection);
@@ -59,6 +84,7 @@ int waitForAck(struct connection *connection);
 int handleFinAck(struct subuff *sub);
 
 #define TCP_HDR_LEN sizeof(struct tcpHdr)
+#define TCP_HDRwOptions_LEN sizeof(struct tcpHdrwOptions)
 
 
 #endif //ANPNETSTACK_TCP_H

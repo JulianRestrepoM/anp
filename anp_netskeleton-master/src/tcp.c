@@ -25,12 +25,33 @@ struct tcpHdr *tcpHdrFromSub(struct subuff *sub) {
 }
 
 void setSynOptionsTcpHdr(struct subuff *sub, struct connection *connection) {
-    struct tcpHdr* hdrToSend = (struct tcpHdr*) sub_push(sub, TCP_HDR_LEN);
+    struct tcpHdrwOptions* hdrToSend = (struct tcpHdrwOptions*) sub_push(sub, TCP_HDRwOptions_LEN);
+    
 
-    setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection), 0);
+    // setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection), 0);
+    hdrToSend->tcpSource = htons(connection->sock->srcport);
+    hdrToSend->tcpDest = connection->sock->dstport;
+    hdrToSend->tcpResPad1 = 0;
+    hdrToSend->tcpResPad2 = 0;
+    hdrToSend->tcpUrg = 0;
+    hdrToSend->tcpAck = 0;
+    hdrToSend->tcpPsh = 0;
+    hdrToSend->tcpRst = 0;
+    hdrToSend->tcpSyn = 0;
+    hdrToSend->tcpFin = 0;
+    hdrToSend->tcpAck = 0;
+    hdrToSend->tcpChecksum = 0;
+    hdrToSend->tcpWinSize = htons(WIN_SIZE);
+    hdrToSend->tcpLen = 5;
+    hdrToSend->tcpSeqNum = htonl(getSeqNum(connection));
+    hdrToSend->tcpAckNum = htonl(getSeqNum(connection));
 
     hdrToSend->tcpSyn = 1;
-    hdrToSend->tcpChecksum = do_tcp_csum((uint8_t *) hdrToSend, TCP_HDR_LEN, IPP_TCP,
+    hdrToSend->kind = 2;
+    hdrToSend->length =4;
+    hdrToSend->mss = htons(WIN_SIZE);
+    hdrToSend->tcpLen +=1;
+    hdrToSend->tcpChecksum = do_tcp_csum((uint8_t *) hdrToSend, TCP_HDRwOptions_LEN, IPP_TCP,
                                           htonl(connection->sock->srcaddr),
                                           htonl(connection->sock->dstaddr));
                                           
@@ -80,8 +101,16 @@ struct subuff *allocTcpSub(int dataLen) {
     return sub;
 }
 
+struct subuff *allocTcpSubwOptions(int dataLen) {
+    unsigned int totalSize = IP_HDR_LEN + ETH_HDR_LEN + TCP_HDRwOptions_LEN + dataLen;
+    struct subuff *sub = alloc_sub(totalSize);
+    sub_reserve(sub, totalSize);
+    sub->protocol = IPP_TCP;
+    return sub;
+}
+
 struct subuff *makeSynSub(struct connection *connection) {
-    struct subuff *sub = allocTcpSub(0);
+    struct subuff *sub = allocTcpSubwOptions(0);
     setSynOptionsTcpHdr(sub, connection);
     return sub;
 }
