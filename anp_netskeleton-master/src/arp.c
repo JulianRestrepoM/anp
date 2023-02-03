@@ -57,8 +57,8 @@ static int process_arp_entry(struct arp_hdr *hdr, struct arp_ipv4 *data){
     memcpy(&entry->arpIpv4, data, sizeof(*data));
     list_add_tail(&entry->list, &arp_cache);
     u32_ip_to_str("[ARP] A new entry for", data->src_ip);
-    debug_arp_payload("original ", data);
-    debug_arp_payload("saved ", (&(entry->arpIpv4)));
+    // debug_arp_payload("original ", data);
+    // debug_arp_payload("saved ", (&(entry->arpIpv4)));
     return 0;
 }
 

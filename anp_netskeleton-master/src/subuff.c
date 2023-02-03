@@ -64,14 +64,20 @@ struct subuff *alloc_sub(unsigned int size)
 }
 
 bool busyWaitingSub(const struct subuff_head *list, int timeout) {
+    timeout = 10;
     time_t start = time(NULL);
     time_t currTime;
+    if(list == NULL) {
+        printf("its null\n");
+    }
     do {
         if(!sub_queue_empty(list)) {
+            // printf("exit 1\n");
             return true;
         }
         time(&currTime);
         // printf("Elapesed %d\n", currTime - start);
     } while(currTime - start<= timeout);
+    // printf("exit 2\n");
     return 0;
 }

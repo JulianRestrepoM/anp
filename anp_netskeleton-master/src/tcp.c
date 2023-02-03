@@ -44,7 +44,7 @@ void setSynOptionsTcpHdr(struct subuff *sub, struct connection *connection) {
     hdrToSend->tcpWinSize = htons(WIN_SIZE);
     hdrToSend->tcpLen = 5;
     hdrToSend->tcpSeqNum = htonl(getSeqNum(connection));
-    hdrToSend->tcpAckNum = htonl(getSeqNum(connection));
+    hdrToSend->tcpAckNum = 0;
 
     hdrToSend->tcpSyn = 1;
     hdrToSend->kind = 2;
@@ -298,24 +298,15 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
     struct iphdr *ipHdr;
     size_t currentSize;
 
-    // if(connection->sock->isNonBlocking && len < connection->buffedAmount) {
-    //     printf("NOT blOCKED A\n");
-    //             errno = EAGAIN;
-    //             // printf("Q LENgth get nodata %ld\n", sub_queue_len(connection->recvPkts));
-    //             return -1;
-    //             return lenRecv; //prob should also return errnos
-    // }
-
     while(lenRecv < len) {
-        
-        // pthread_mutex_lock(&connection->connectionLock);
         if(!sub_queue_empty(connection->sock->recvPkts)) {
             while(!sub_queue_empty(connection->sock->recvPkts) && lenRecv < len) {
                 current = sub_peek(connection->sock->recvPkts);
-                // pthread_mutex_unlock(&connection->connectionLock);
                 ipHdr = IP_HDR_FROM_SUB(current);
-
-                //TODO: it seems to only save max 536 at a time. and overwrites first half of packet larger
+                if(!ipHdr) {
+                    printf("iphdr is null\n");
+                    return -1;
+                }
                 currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN - current->read;
                 void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN + current->read;
                 void *dest = buf + lenRecv;
@@ -343,73 +334,15 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
             }
         }
         else {
-            // pthread_mutex_unlock(&connection->connectionLock);
-            // sleep(1);
-            // i++;
-            // if(i > 5) {
-            //     printf("getData Timed out\n");
-            //     return lenRecv;
-            // }
             if(connection->sock->isNonBlocking) {
                 errno = EAGAIN;
-                // printf("Q LENgth get nodata %ld\n", sub_queue_len(connection->recvPkts));
-                // return -1;
                 connection->sock->readAmount -= lenRecv;
                 return lenRecv; //prob should also return errnos
             }
         }
     }
-    // printf("Q LENgth get data %ld\n", sub_queue_len(connection->recvPkts));
     connection->sock->readAmount -= lenRecv;
     return lenRecv;
 }
 
-int getDataTest(struct connection *connection, void *buf, size_t len) { //TODO: i think im clearing the buffer while there is still data i need to read in. since wget calls small reads at a time
-    size_t lenRecv = 0;
-    struct subuff *current;
-    struct iphdr *ipHdr;
-    size_t currentSize;
-
-    while(lenRecv < len) {
-        
-        // pthread_mutex_lock(&connection->connectionLock);
-        if(!sub_queue_empty(connection->sock->recvPkts)) {
-            while(!sub_queue_empty(connection->sock->recvPkts) && lenRecv < len) {
-                current = sub_peek(connection->sock->recvPkts);
-                // pthread_mutex_unlock(&connection->connectionLock);
-                ipHdr = IP_HDR_FROM_SUB(current);
-
-                //TODO: it seems to only save max 536 at a time. and overwrites first half of packet larger
-                currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN - current->read;
-                void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN + current->read;
-                void *dest = buf + lenRecv;
-                 
-                
-                if((currentSize + lenRecv) > len ) {
-                    currentSize = len -lenRecv;
-                    lenRecv += currentSize;
-                    memcpy(dest, src, currentSize);
-                }
-                else {
-                    memcpy(dest, src, currentSize);
-                    lenRecv += currentSize;
-                }
-                if(current->len >= currentSize) {
-                    sub_dequeue(connection->sock->recvPkts);
-                    free_sub(current);
-                }
-                else {
-                    int read = current->read;
-                    read += currentSize;
-                    current->read = read;
-                }
-                    
-            }
-        }
-        // else {
-        //     pthread_mutex_unlock(&connection->connectionLock);
-        // }
-    }
-    return lenRecv;
-}
 

@@ -33,14 +33,6 @@ struct subuff_head *dataSplitUdp(struct connection *connection, const void *buf,
         hdrToSend->checksum = 0;
         hdrToSend->length =htons(UDP_HDR_LEN + lenToSend); // make sure this means what i mean it means
         hdrToSend->checksum = 0;
-        // printf("HDR = %d Payload = %d total = %d\n", UDP_HDR_LEN, lenToSend, UDP_HDR_LEN + lenToSend);
-       // hdrToSend->checksum = do_tcp_csum((uint8_t*)hdrToSend, UDP_HDR_LEN + lenToSend, IPPROTO_UDP, connection->sock->srcaddr, connection->sock->dstaddr); //make sure this is right
-    //    hdrToSend->checksum = do_tcp_csum((uint16_t *)hdrToSend, UDP_HDR_LEN + lenToSend, IPP_UDP, 
-    //                                     htonl(connection->sock->srcaddr), 
-    //                                     htonl(connection->sock->dstaddr))+htons(6); //find out where im missing this 6
-
-        // printf("CHECLSUM IS %hx\n", ntohs(hdrToSend->checksum));
-        // hdrToSend(":AND NOW %hx\n", )
         lastSentPtr += lenToSend;
 
         if((len - lastSentPtr) > maxSendLen) {
@@ -105,17 +97,12 @@ int getUdpData(struct socket *sock, void *buf, size_t len, int flags, struct soc
         if(!sub_queue_empty(sock->recvPkts)) {
             current = sub_peek(sock->recvPkts);
             struct sockaddr_in *sin = (struct sockaddr_in *)src_addr;
-            printf(" BEFORE dstport %d dstaddrs %ld, domain %d addressLen %d\n ", sin->sin_port, sin->sin_addr.s_addr, sin->sin_family, addrlen);
             sin->sin_port = sock->dstport;
             sin->sin_addr.s_addr = htonl(sock->dstaddr);
             sin->sin_family = sock->domain;
             memcpy(&src_addr, &sin, sizeof(sin));
 
-            *addrlen = sock->dstaddrlen;
-            // memcpy(&addrlen, &len, sizeof(len));
-            
-            printf(" MIDLE dstport %d dstaddrs %ld, domain %d addressLen %d\n ", sin->sin_port, sin->sin_addr.s_addr, sin->sin_family, *addrlen);         
-            
+            *addrlen = sock->dstaddrlen;   
         }
     }
 
@@ -126,14 +113,12 @@ int getUdpData(struct socket *sock, void *buf, size_t len, int flags, struct soc
         currentSize = IP_PAYLOAD_LEN(ipHdr) - UDP_HDR_LEN - current->read;
         void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + UDP_HDR_LEN + current->read;
         void *dest = buf + lenRecv;
-        // currentSize = len -lenRecv;
 
         lenRecv += currentSize;
         memcpy(dest, src, currentSize);
+        free_sub(current);
     }
-
-    struct sockaddr_in *sin = (struct sockaddr_in *)src_addr;
-    printf(" AFTER dstport %d dstaddrs %ld, domain %d addressLen %d\n ", sin->sin_port, sin->sin_addr.s_addr, sin->sin_family, addrlen);
     sock->readAmount -= lenRecv;
+    
     return lenRecv;
 }
