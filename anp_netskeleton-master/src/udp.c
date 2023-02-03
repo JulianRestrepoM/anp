@@ -92,6 +92,7 @@ int getUdpData(struct socket *sock, void *buf, size_t len, int flags, struct soc
         printf("oh oh Ive got flags\n");
         return -1;
     }
+    pthread_mutex_lock(&sock->sock_lock);
     if(src_addr != NULL) {
         // printf("got address\n");
         if(!sub_queue_empty(sock->recvPkts)) {
@@ -119,6 +120,6 @@ int getUdpData(struct socket *sock, void *buf, size_t len, int flags, struct soc
         free_sub(current);
     }
     sock->readAmount -= lenRecv;
-    
+    pthread_mutex_unlock(&sock->sock_lock);
     return lenRecv;
 }

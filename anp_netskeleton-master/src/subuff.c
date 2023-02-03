@@ -64,7 +64,9 @@ struct subuff *alloc_sub(unsigned int size)
 }
 
 bool busyWaitingSub(const struct subuff_head *list, int timeout) {
-    timeout = 10;
+    if(timeout >=1000) {
+        timeout = 5;
+    }
     time_t start = time(NULL);
     time_t currTime;
     if(list == NULL) {
@@ -79,5 +81,8 @@ bool busyWaitingSub(const struct subuff_head *list, int timeout) {
         // printf("Elapesed %d\n", currTime - start);
     } while(currTime - start<= timeout);
     // printf("exit 2\n");
+    if(timeout == 5) {
+        printf("timeout out shorter\n");
+    }
     return 0;
 }

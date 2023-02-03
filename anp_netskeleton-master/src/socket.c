@@ -20,6 +20,7 @@ struct socket *createSocket(int domain, int type, int protocol) {
     newSocket->recvPkts = (struct subuff_head *) malloc(sizeof(struct subuff_head));
     newSocket->readAmount = 0;
     sub_queue_init(newSocket->recvPkts);
+    pthread_mutex_init(&newSocket->sock_lock, NULL);
 
     sockListAdd(newSocket);
 

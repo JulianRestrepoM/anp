@@ -8,6 +8,7 @@
 
 
 struct socket {
+    pthread_mutex_t sock_lock;
     struct list_head list;
     int type;
     int domain;

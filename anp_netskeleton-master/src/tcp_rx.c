@@ -115,8 +115,10 @@ int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct
     struct iphdr *ipHdr = IP_HDR_FROM_SUB(sub);
     size_t currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
     
+    pthread_mutex_lock(&incomingConnection->sock->sock_lock);
     setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum) + currentSize);
     sub_queue_tail(incomingConnection->sock->recvPkts, sub);
+    pthread_mutex_unlock(&incomingConnection->sock->sock_lock);
     incomingConnection->sock->readAmount += currentSize;
 
     uint32_t lastSeq = getLastRecvSeq(incomingConnection);

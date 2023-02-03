@@ -300,11 +300,13 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
 
     while(lenRecv < len) {
         if(!sub_queue_empty(connection->sock->recvPkts)) {
+            pthread_mutex_lock(&connection->sock->sock_lock);
             while(!sub_queue_empty(connection->sock->recvPkts) && lenRecv < len) {
                 current = sub_peek(connection->sock->recvPkts);
                 ipHdr = IP_HDR_FROM_SUB(current);
                 if(!ipHdr) {
                     printf("iphdr is null\n");
+                    pthread_mutex_unlock(&connection->sock->sock_lock);
                     return -1;
                 }
                 currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN - current->read;
@@ -332,6 +334,7 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                 }
                     
             }
+            pthread_mutex_unlock(&connection->sock->sock_lock);
         }
         else {
             if(connection->sock->isNonBlocking) {
