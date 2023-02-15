@@ -49,7 +49,7 @@ void setSynOptionsTcpHdr(struct subuff *sub, struct connection *connection) {
     hdrToSend->tcpSyn = 1;
     hdrToSend->kind = 2;
     hdrToSend->length =4;
-    hdrToSend->mss = htons(WIN_SIZE);
+    hdrToSend->mss = htons(MSS);
     hdrToSend->tcpLen +=1;
     hdrToSend->tcpChecksum = do_tcp_csum((uint8_t *) hdrToSend, TCP_HDRwOptions_LEN, IPP_TCP,
                                           htonl(connection->sock->srcaddr),
@@ -60,7 +60,7 @@ void setSynOptionsTcpHdr(struct subuff *sub, struct connection *connection) {
 void setSynAckOptionsTcpHdr(struct subuff *sub, struct connection *connection) {
     struct tcpHdr* hdrToSend = (struct tcpHdr*) sub_push(sub, TCP_HDR_LEN);
 
-    setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection), getLastRecvSeq(connection)+1);
+    setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection), connection->ackNum + 1);
 
     hdrToSend->tcpSyn = 1;
     hdrToSend->tcpAck = 1;
@@ -129,7 +129,7 @@ struct subuff *makeAckSub(struct connection *connection, uint32_t ackNum) {
 
 struct subuff *makeFinSub(struct connection *connection) {
     // uint32_t ackNum = getLastRecvSeq(connection) + 1;
-     uint32_t ackNum = getLastRecvSeq(connection); //todo: this fixed the close with iperf, idk if it broke it with reddit maybe
+     uint32_t ackNum = connection->ackNum; //todo: this fixed the close with iperf, idk if it broke it with reddit maybe
     struct subuff *sub = allocTcpSub(0);
     setFinOptionsTcpHdr(sub, connection, ackNum);
     return sub;
@@ -246,8 +246,9 @@ int doTcpHandshake(struct connection *connection) {
         return -1;
     }
 
-    setLastRecvSeqNum(connection, getLastRecvSeq(connection) + 1);
-    int ackCode = sendAck(connection, getLastRecvSeq(connection));
+    // setLastRecvSeqNum(connection, getLastRecvSeq(connection) + 1);
+    connection->ackNum += 1;
+    int ackCode = sendAck(connection, connection->ackNum);
     if(ackCode >= 0) {
         setState(connection, ESTABLISHED);
     }
@@ -274,7 +275,7 @@ int doTcpClose(struct connection *connection) {
         setState(connection, FIN_WAIT_2);
         setState(connection, TIME_WAIT);
 
-        ret = sendAck(connection, getLastRecvSeq(connection) + 1);
+        ret = sendAck(connection, connection->ackNum + 1);
         if(ret < 0 ) {
             printf("ack failed to send\n");
             return ret;

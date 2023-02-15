@@ -17,6 +17,9 @@
 #define SYN_RECIEVED 9
 #define PORT_RANGE (60999 - 32768 + 1) + 32768 //empirical ports
 
+#define MSS 1460
+#define WIN_SIZE 62780 //the code doesnt like it when it gets packets larger. I think its cause it overwrites some packets
+
 
 struct connection {
     pthread_mutex_t connectionLock;
@@ -30,9 +33,10 @@ struct connection {
     int tcpState;
     struct socket *sock;
     uint32_t seqNum;
+    uint32_t ackNum;
     int packetNum;
-    uint32_t lastRecvSeq;
     bool isLocalConnection;
+    uint16_t peerWindowSize;
 
 };
 
@@ -60,8 +64,6 @@ int getWaitingForAck(struct connection *connection);
 int setReadyToRecv(struct connection *connection, bool ready);
 uint32_t getSeqNum(struct connection *connection);
 uint32_t setSeqNum(struct connection *connection, uint32_t newSeq);
-uint32_t getLastRecvSeq(struct connection *connection);
-uint32_t setLastRecvSeqNum(struct connection *connection, uint32_t newSeq);
 int genRandomPort();
 
 

@@ -19,7 +19,6 @@ int tcpRx(struct subuff *sub) {
         handleSyn(sub);
     }
     else {
-        printf("dropping tcp\n");
         free_sub(sub);
         return -1;
     }
@@ -55,7 +54,7 @@ int handleSyn(struct subuff *sub) {
     addNewConnection(newConnection, newSocket);
 
     setState(newConnection, SYN_RECIEVED);
-    setLastRecvSeqNum(newConnection, ntohl(hdr->tcpSeqNum));
+    newConnection->ackNum = ntohl(hdr->tcpSeqNum);
     
     if(findConnectionbyPort(ntohs(newSocket->dstport))) {
         newConnection->isLocalConnection = true;
@@ -84,27 +83,24 @@ int handleSyn(struct subuff *sub) {
 int handleAck(struct subuff *sub) {
     struct tcpHdr *hdr = tcpHdrFromSub(sub);
     uint32_t ackNum = ntohl(hdr->tcpAckNum);
-    struct connection *incomingConnection = findConnectionBySeqNum(ackNum);
+    struct connection *incomingConnection = findConnectionbyPort(hdr->tcpDest);
 
-    if((incomingConnection != NULL) && (getWaitingForAck(incomingConnection) == true)) {
-        setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
-        setWaitingForAck(incomingConnection, false);
-        return 0;
-    }
-    else if(incomingConnection == NULL) {
-        incomingConnection = findConnectionBySeqNum(ackNum - 1);
-        if(incomingConnection != NULL) {
-            return handleFinAck(sub);
-        }
-        incomingConnection = findConnectionbyPort((hdr->tcpDest)); //fixes some packages getting dropped accidnetly because it could not find by seqnum. 
-        
-        if(incomingConnection != NULL && (getLastRecvSeq(incomingConnection) == ntohl(hdr->tcpSeqNum))) {
-            return handleRecv(incomingConnection, sub, hdr);
-        }
+    if(incomingConnection == NULL) {
         goto dropPkt;
     }
-    else {
-        return handleRecv(incomingConnection, sub, hdr); 
+
+    if(getWaitingForAck(incomingConnection) == true) {
+        if(ackNum == getSeqNum(incomingConnection)) {
+            setWaitingForAck(incomingConnection, false);
+            free_sub(sub);
+            return 0;
+        }
+    }
+    else if(getSeqNum(incomingConnection) == ackNum -1) {
+        return handleFinAck(sub);
+    }
+    else if(ntohl(hdr->tcpSeqNum) == incomingConnection->ackNum) {
+        return handleRecv(incomingConnection, sub, hdr);
     }
     dropPkt:
     free_sub(sub);
@@ -116,13 +112,12 @@ int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct
     size_t currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
     
     pthread_mutex_lock(&incomingConnection->sock->sock_lock);
-    setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum) + currentSize);
     sub_queue_tail(incomingConnection->sock->recvPkts, sub);
     pthread_mutex_unlock(&incomingConnection->sock->sock_lock);
     incomingConnection->sock->readAmount += currentSize;
 
-    uint32_t lastSeq = getLastRecvSeq(incomingConnection);
-    int ret = sendAck(incomingConnection, lastSeq);
+    incomingConnection->ackNum = ntohl(hdr->tcpSeqNum) + currentSize;
+    int ret = sendAck(incomingConnection, incomingConnection->ackNum);
         if(ret < 0) {
             printf("failed to send ACK\n");
             return -1;
@@ -141,7 +136,7 @@ int handleSynAck(struct subuff *sub) {
     if(getState(incomingConnection) == SYN_SENT) {
         goto dropPkt;
     }
-    setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
+    incomingConnection->ackNum = ntohl(hdr->tcpSeqNum);
 
     pthread_mutex_lock(&incomingConnection->connectionLock);
     pthread_cond_signal(&incomingConnection->synackRecv);
@@ -165,7 +160,7 @@ int handleFinAck(struct subuff *sub) {
     if(incomingConnection == NULL) {
         if((incomingConnection = findConnectionBySeqNum(ackNum)) != NULL) { //TODO: Actually having this work properlly is probably important lol
             setState(incomingConnection, CLOSE_WAIT);
-            sendAck(incomingConnection, getLastRecvSeq(incomingConnection) + 1);
+            sendAck(incomingConnection, incomingConnection->ackNum+1);
             sendFin(incomingConnection);
             setState(incomingConnection, LAST_ACK);
             free_sub(sub);
@@ -176,7 +171,7 @@ int handleFinAck(struct subuff *sub) {
     if(getState(incomingConnection) == SYN_SENT) {
         goto dropPkt;
     }
-    setLastRecvSeqNum(incomingConnection, ntohl(hdr->tcpSeqNum));
+    incomingConnection->ackNum = ntohl(hdr->tcpSeqNum);
     pthread_mutex_lock(&incomingConnection->connectionLock);
     pthread_cond_signal(&incomingConnection->finAckRecv);
     pthread_mutex_unlock(&incomingConnection->connectionLock);

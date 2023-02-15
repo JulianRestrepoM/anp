@@ -5,7 +5,6 @@ int udpRx(struct subuff *sub) {
     struct udpHdr *hdr = udpHdrFromSub(sub);
     struct socket *sock = getSocketByPort((hdr->destinationPort));
     if(sock == NULL) {
-        printf("UDP packet not mine, dropping\n");
         free_sub(sub);
         return 0;
     }

@@ -97,7 +97,7 @@ struct subuff_head *dataSplit(struct connection *connection, const void *buf, si
         buf += lenToSend;
 
         struct tcpHdr *hdrToSend = (struct tcpHdr*) sub_push(sub, TCP_HDR_LEN);
-        setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection) + lastSentPtr, getLastRecvSeq(connection));
+        setGeneralOptionsTcpHdr(hdrToSend, connection, getSeqNum(connection) + lastSentPtr, connection->ackNum);
 
         hdrToSend->tcpAck = 1;
         hdrToSend->tcpPsh = 1;

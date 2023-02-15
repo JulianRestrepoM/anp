@@ -91,6 +91,8 @@ void addNewConnection(struct connection *newConnection, struct socket *sock) {
     newConnection->waitingForAck = false;
     newConnection->isLocalConnection = false;
     newConnection->synAckRecv2 = false;
+    newConnection->ackNum = 0;
+    newConnection->peerWindowSize = MSS;
 
     pthread_mutex_unlock(&newConnection->connectionLock);
     connectionListAdd(newConnection);
@@ -177,20 +179,6 @@ uint32_t getSeqNum(struct connection *connection) {
 uint32_t setSeqNum(struct connection *connection, uint32_t newSeq) {
     pthread_mutex_lock(&connection->connectionLock);
     connection->seqNum = newSeq;
-    pthread_mutex_unlock(&connection->connectionLock);
-}
-
-uint32_t getLastRecvSeq(struct connection *connection) {
-    uint32_t lastSeq;
-    pthread_mutex_lock(&connection->connectionLock);
-    lastSeq = connection->lastRecvSeq;
-    pthread_mutex_unlock(&connection->connectionLock);
-    return lastSeq;
-}
-
-uint32_t setLastRecvSeqNum(struct connection *connection, uint32_t newSeq) {
-    pthread_mutex_lock(&connection->connectionLock);
-    connection->lastRecvSeq = newSeq;
     pthread_mutex_unlock(&connection->connectionLock);
 }
 

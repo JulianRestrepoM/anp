@@ -8,7 +8,7 @@
 #include "connection.h"
 #include "config.h"
 
-#define WIN_SIZE 1460 //the code doesnt like it when it gets packets larger. I think its cause it overwrites some packets
+
 
 
 struct tcpHdr {
