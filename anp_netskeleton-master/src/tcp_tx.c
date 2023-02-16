@@ -122,14 +122,14 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
     int ret;
     int totalSent = 0;
     struct subuff *sending;
-    int i = 0;
+    connection->windowSent = 0;
 
-    while(sub_queue_empty(subsToSend) == 0) {
+    while(!sub_queue_empty(subsToSend)) {
         sending = sub_dequeue(subsToSend);
         uint32_t lastByte = sending->len - TCP_HDR_LEN;
         
         setSeqNum(connection, getSeqNum(connection) + lastByte);
-        setWaitingForAck(connection, true);
+        
 
         if(getIsLocal(connection)) {
             tcpRx(sending);
@@ -141,19 +141,24 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
                 return ret;
             }
         }
+
+        totalSent += ret;
+        connection->windowSent = totalSent;
+        if(connection->windowSent >= connection->peerWindowSize || sub_queue_empty(subsToSend)) {
+            setWaitingForAck(connection, true);
+        }
         
         if(getWaitingForAck(connection)) {
             int wait = waitForAck(connection);
             if(wait == -1) {
                 return wait;
             }
+            connection->windowSent = 0;
         }
-        totalSent += ret;
+        
         if(!getIsLocal(connection)) {
             free_sub(sending);
         }
-        
-        i++;
     }
     return totalSent;
 }

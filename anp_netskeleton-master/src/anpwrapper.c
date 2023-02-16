@@ -113,6 +113,10 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen){
         memcpy(&currSocket->dstport, &sin->sin_port, sizeof(sin->sin_port));
 
         struct connection *newConnection = allocConnection();
+        if(!newConnection) {
+            printf("its NULL\n");
+            return -1;
+        }
         addNewConnection(newConnection, currSocket);
 
         struct socket *dstSock = getSocketByPort(htons(currSocket->dstport));
@@ -516,7 +520,7 @@ int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)
 int ioctl(int fd, unsigned long request, ...) {
     // printf("CLIENT CALLED: ioctl request %ld sock %d\n", request, fd);
     if(isFdUsed(fd)) {
-        // printf("ANP ioctl\n");
+        // printf("ANP ioctl %d\n", fd);
         if(request == 21531) { // FIONREAD
             va_list args;
             va_start(args, request);

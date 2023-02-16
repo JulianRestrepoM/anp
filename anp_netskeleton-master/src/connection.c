@@ -93,6 +93,7 @@ void addNewConnection(struct connection *newConnection, struct socket *sock) {
     newConnection->synAckRecv2 = false;
     newConnection->ackNum = 0;
     newConnection->peerWindowSize = MSS;
+    newConnection->windowSent = 0;
 
     pthread_mutex_unlock(&newConnection->connectionLock);
     connectionListAdd(newConnection);

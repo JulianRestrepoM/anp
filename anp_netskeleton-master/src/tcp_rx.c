@@ -55,6 +55,7 @@ int handleSyn(struct subuff *sub) {
 
     setState(newConnection, SYN_RECIEVED);
     newConnection->ackNum = ntohl(hdr->tcpSeqNum);
+    newConnection->peerWindowSize = ntohs(hdr->tcpWinSize);
     
     if(findConnectionbyPort(ntohs(newSocket->dstport))) {
         newConnection->isLocalConnection = true;
@@ -85,17 +86,26 @@ int handleAck(struct subuff *sub) {
     uint32_t ackNum = ntohl(hdr->tcpAckNum);
     struct connection *incomingConnection = findConnectionbyPort(hdr->tcpDest);
 
+    struct iphdr *ipHdr = IP_HDR_FROM_SUB(sub);
+    size_t currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
+
     if(incomingConnection == NULL) {
         goto dropPkt;
     }
 
-    if(getWaitingForAck(incomingConnection) == true) {
-        if(ackNum == getSeqNum(incomingConnection)) {
-            setWaitingForAck(incomingConnection, false);
-            free_sub(sub);
-            return 0;
+    if(currentSize == 0) {
+        if(getWaitingForAck(incomingConnection) == true) {
+            if(ackNum == getSeqNum(incomingConnection)) {
+                setWaitingForAck(incomingConnection, false);
+                free_sub(sub);
+                return 0;
+            }
         }
+        incomingConnection->windowSent = 0;
+        free_sub(sub);
+        return 0;
     }
+    
     else if(getSeqNum(incomingConnection) == ackNum -1) {
         return handleFinAck(sub);
     }
@@ -137,6 +147,7 @@ int handleSynAck(struct subuff *sub) {
         goto dropPkt;
     }
     incomingConnection->ackNum = ntohl(hdr->tcpSeqNum);
+    incomingConnection->peerWindowSize = ntohs(hdr->tcpWinSize);
 
     pthread_mutex_lock(&incomingConnection->connectionLock);
     pthread_cond_signal(&incomingConnection->synackRecv);

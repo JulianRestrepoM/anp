@@ -37,6 +37,7 @@ struct connection {
     int packetNum;
     bool isLocalConnection;
     uint16_t peerWindowSize;
+    uint16_t windowSent;
 
 };
 
