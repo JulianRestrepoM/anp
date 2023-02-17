@@ -24,7 +24,7 @@ int run_bash_command(char *cmd, ...){
     va_start(params, cmd);
     vsnprintf(exe_buffer, CMDBUFLEN, cmd, params);
     va_end(params);
-    printf("Executing : %s \n", exe_buffer);
+    // printf("Executing : %s \n", exe_buffer);
     return system(exe_buffer);
 }
 

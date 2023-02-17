@@ -101,7 +101,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen){
 
         if (currSocket == NULL)
         {
-            printf("error: Socket not found\n");
+            // printf("error: Socket not found\n");
             return -1;
         }
         currSocket->dstaddr = ntohl((uint32_t)sin->sin_addr.s_addr);
@@ -114,7 +114,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen){
 
         struct connection *newConnection = allocConnection();
         if(!newConnection) {
-            printf("its NULL\n");
+            // printf("its NULL\n");
             return -1;
         }
         addNewConnection(newConnection, currSocket);
@@ -132,7 +132,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen){
         {
             if (doTcpHandshake(newConnection) != 0)
             {
-                printf("Handshake failed\n");
+                // printf("Handshake failed\n");
                 return -1;
             }
             return 0;
@@ -150,11 +150,11 @@ ssize_t send(int sockfd, const void *buf, size_t len, int flags){
     if(is_anp_sockfd) {
         struct connection *connection = findConnectionByFd(sockfd);
         if (connection == NULL) {
-            printf("error: Socket not found\n");
+            // printf("error: Socket not found\n");
         }
         if(connection->sock->type & SOCK_STREAM) {
             if (getState(connection) != ESTABLISHED) {
-                printf("error: connection not in ESTABLISHED state\n");
+                // printf("error: connection not in ESTABLISHED state\n");
                 return -1;
             }
             return sendTcpData(connection, buf, len);
@@ -174,13 +174,13 @@ ssize_t recv (int sockfd, void *buf, size_t len, int flags){
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         if(buf == NULL) {
-            printf("recv buf is null\n");
+            // printf("recv buf is null\n");
             errno = EINVAL;
             return -1;
         }
         struct connection *connection = findConnectionByFd(sockfd);
         if (connection == NULL) {
-            printf("error: Socket not found\n");
+            // printf("error: Socket not found\n");
         }
         if (connection->sock->type & SOCK_STREAM)
         {
@@ -201,6 +201,7 @@ int close (int sockfd){
     // printf("CLIENT CALLED: close: sockf=%d\n", sockfd); //speedtest doesnt like this print
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
+        // printf("CLIENT CALLED: close: sockf=%d\n", sockfd); 
         int ret = 0;
         struct connection *toClose = findConnectionByFd(sockfd);
         if(!toClose) {
@@ -225,7 +226,7 @@ int close (int sockfd){
 }
 
 int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen) {
-    // printf("CLIENT CALLED: setsockopt; sockf=%d\n", sockfd);
+    // printf("CLIENT CALLED: setsockopt; sockf=%d level %d optname %d\n", sockfd, level, optname);
     if(isFdUsed(sockfd)) {
         return 0;
     }
@@ -245,18 +246,17 @@ int getsockopt(int sockfd, int level, int optname, void *restrict optval, sockle
                 return 0;
             }
             else {
-                printf("getsockopt unsupported optname\n");
+                // printf("getsockopt unsupported optname\n");
                 _getsockopt(sockfd, level, optname, optval, optlen);
-                exit(-1);
+                // exit(-1);
             }
         }
         else{
-            printf("getsockopt unsupported level\n");
+            // printf("getsockopt unsupported level\n");
             _getsockopt(sockfd, level, optname, optval, optlen);
-            exit(-1);
+            // exit(-1);
         }
-         exit(0);
-
+        //  exit(0);
     }
     return _getsockopt(sockfd, level, optname, optval, optlen);
     
@@ -271,7 +271,7 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
     // printf("CLIENT CALLED: recvfrom; fd=%d wants %d\n", sockfd, len);
     if(isFdUsed(sockfd)) {
         if(buf == NULL) {
-            printf("recvfrom buf is null\n");
+            // printf("recvfrom buf is null\n");
             errno = EINVAL;
             return -1;
         }
@@ -333,6 +333,7 @@ int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict 
 ssize_t write(int fd, const void*buf, size_t count) {
     // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
+        // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
         return send(fd, buf, count, 0);
     }
     return _write(fd, buf, count);
@@ -341,6 +342,7 @@ ssize_t write(int fd, const void*buf, size_t count) {
 ssize_t read(int fd, void *buf, size_t count) {
     // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
+        // printf("CLIENT CALLED: read; sock=%d, count=%d\n", fd, count);
         return recv(fd, buf, count, 0);
     }
     return _read(fd, buf, count);
@@ -506,7 +508,7 @@ int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)
     if(isFdUsed(sockfd)) {   
         for(int i = 0; i < vlen; i++) {
             if(msgvec->msg_hdr.msg_iovlen > 1) {
-                printf("OH OH, I need to implement it\n");
+                // printf("OH OH, I need to implement it\n");
                 exit(-1);
             }
             msgvec->msg_len = send(sockfd, msgvec->msg_hdr.msg_iov->iov_base, msgvec->msg_hdr.msg_iov->iov_len, 0)-42;
@@ -535,8 +537,7 @@ int ioctl(int fd, unsigned long request, ...) {
             return 0;
         }
         else{
-            printf("request %ld not implemented\n", request);
-            exit(-1);
+            // printf("request %ld not implemented\n", request);
         }
         return 0;
     }

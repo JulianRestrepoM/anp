@@ -70,7 +70,7 @@ bool busyWaitingSub(const struct subuff_head *list, int timeout) {
     time_t start = time(NULL);
     time_t currTime;
     if(list == NULL) {
-        printf("its null\n");
+        // printf("its null\n");
     }
     do {
         if(!sub_queue_empty(list)) {
@@ -82,7 +82,7 @@ bool busyWaitingSub(const struct subuff_head *list, int timeout) {
     } while(currTime - start<= timeout);
     // printf("exit 2\n");
     if(timeout == 5) {
-        printf("timeout out shorter\n");
+        // printf("timeout out shorter\n");
     }
     return 0;
 }

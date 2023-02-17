@@ -197,7 +197,7 @@ int waitForAck(struct connection *connection) {
     pthread_mutex_unlock(&connection->connectionLock);
     
     if(ret == ETIMEDOUT) {
-        printf("error: no ack received\n");
+        // printf("error: no ack received\n");
         // return -1; //todo: i think theres is some locking/cuncurrent issues, that makes it think it did not recieve an ack
     }
     return 0;
@@ -218,7 +218,7 @@ int waitForFinACk(struct connection *connection) {
     pthread_mutex_unlock(&connection->connectionLock);
     
     if(ret == ETIMEDOUT) {
-        printf("error: no fin ack received\n");
+        // printf("error: no fin ack received\n");
         return -1;
     }
     return 0;
@@ -232,7 +232,7 @@ int doTcpHandshake(struct connection *connection) {
     int synCode = sendSyn(connection);
 
     if(synCode < 0) {
-        printf("error: syn failed, ip_output code %d\n", synCode);
+        // printf("error: syn failed, ip_output code %d\n", synCode);
         return -1;
     }
 
@@ -241,8 +241,8 @@ int doTcpHandshake(struct connection *connection) {
         setState(connection, SYN_SENT);
     }
     if(getState(connection) != SYN_SENT) {
-        printf("handshake state %d\n", getState(connection));
-        printf("error: Synack timeout\n");
+        // printf("handshake state %d\n", getState(connection));
+        // printf("error: Synack timeout\n");
         return -1;
     }
 
@@ -253,7 +253,7 @@ int doTcpHandshake(struct connection *connection) {
         setState(connection, ESTABLISHED);
     }
     else {
-        printf("error: ACK failed, ip_output code %d\n", ackCode);
+        // printf("error: ACK failed, ip_output code %d\n", ackCode);
         return -1;
     }
     return 0;
@@ -264,7 +264,7 @@ int doTcpClose(struct connection *connection) {
     if(currState == ESTABLISHED) {
         int ret = sendFin(connection);
         if(ret < 0) {
-            printf("sending fin failed\n");
+            // printf("sending fin failed\n");
             return ret;
         }
         setState(connection, FIN_WAIT_1);
@@ -277,7 +277,7 @@ int doTcpClose(struct connection *connection) {
 
         ret = sendAck(connection, connection->ackNum + 1);
         if(ret < 0 ) {
-            printf("ack failed to send\n");
+            // printf("ack failed to send\n");
             return ret;
         }
         setState(connection, CLOSED);
@@ -287,7 +287,7 @@ int doTcpClose(struct connection *connection) {
         return 0;
     }
     else {
-        printf("Connection not established\n");
+        // printf("Connection not established\n");
         return -1;
     }
    
@@ -306,7 +306,7 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                 current = sub_peek(connection->sock->recvPkts);
                 ipHdr = IP_HDR_FROM_SUB(current);
                 if(!ipHdr) {
-                    printf("iphdr is null\n");
+                    // printf("iphdr is null\n");
                     pthread_mutex_unlock(&connection->sock->sock_lock);
                     return -1;
                 }

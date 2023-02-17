@@ -35,7 +35,7 @@ static struct rtentry *route_alloc(uint32_t dst, uint32_t gateway, uint32_t netm
     list_init(&rt->list);
 
     rt->dst = dst;
-    u32_ip_to_str("GXXX ", gateway);
+    // u32_ip_to_str("GXXX ", gateway);
     rt->gateway = gateway;
     rt->netmask = netmask;
     rt->flags = flags;

@@ -129,7 +129,7 @@ int handleRecv(struct connection *incomingConnection, struct subuff *sub, struct
     incomingConnection->ackNum = ntohl(hdr->tcpSeqNum) + currentSize;
     int ret = sendAck(incomingConnection, incomingConnection->ackNum);
         if(ret < 0) {
-            printf("failed to send ACK\n");
+            // printf("failed to send ACK\n");
             return -1;
         } 
     return 0;

@@ -34,7 +34,7 @@ static struct anp_netdev *netdev_alloc(char *addr, char *hwaddr, uint32_t mtu)
 {
     struct anp_netdev *dev = calloc(1, sizeof(struct anp_netdev));
     if( NULL == dev){
-        printf("Error: dev calloc failed \n");
+        // printf("Error: dev calloc failed \n");
         return NULL;
     }
     dev->addr = ip_str_to_h32(addr);
@@ -62,14 +62,14 @@ static int get_mac(const char *iface, uint8_t *mac)
     struct ifreq ifr;
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if( fd < 0){
-        printf(" fd failed \n");
+        // printf(" fd failed \n");
         exit(-1);
     }
     ifr.ifr_addr.sa_family = AF_INET;
     strncpy(ifr.ifr_name , iface , IFNAMSIZ-1);
     int ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
     if( ret < 0 ){
-        printf("ioctl failed \n");
+        // printf("ioctl failed \n");
         exit(0);
     }
     close(fd);
@@ -105,9 +105,9 @@ static int process_packet(struct subuff *sub)
             ip_rx(sub);
             break;
         case ETH_P_IPV6:
-            printf("Error: Did you forget to disable the ipv6 support?\n");
+            // printf("Error: Did you forget to disable the ipv6 support?\n");
         default:
-            printf("Error: Unsupported ethertype %x\n", hdr->ethertype);
+            // printf("Error: Unsupported ethertype %x\n", hdr->ethertype);
             free_sub(sub);
             break;
     }
@@ -124,7 +124,7 @@ void *netdev_rx_loop()
         struct subuff *sub = alloc_sub(ANP_MTU_15_MAX_SIZE);
         ret = tdev_read((char *)sub->data, ANP_MTU_15_MAX_SIZE);
         if (ret < 0) {
-            printf("Error in reading the tap device, %d and errno %d \n", ret, errno);
+            // printf("Error in reading the tap device, %d and errno %d \n", ret, errno);
             free_sub(sub);
             return NULL;
         }

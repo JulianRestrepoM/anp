@@ -56,7 +56,7 @@ static int process_arp_entry(struct arp_hdr *hdr, struct arp_ipv4 *data){
     entry->state = ARP_RESOLVED;
     memcpy(&entry->arpIpv4, data, sizeof(*data));
     list_add_tail(&entry->list, &arp_cache);
-    u32_ip_to_str("[ARP] A new entry for", data->src_ip);
+    // u32_ip_to_str("[ARP] A new entry for", data->src_ip);
     // debug_arp_payload("original ", data);
     // debug_arp_payload("saved ", (&(entry->arpIpv4)));
     return 0;
@@ -80,12 +80,12 @@ void arp_rx(struct subuff *skb)
     // debug_arp("in", arphdr);
 
     if (arphdr->hwtype != ARP_ETHERNET) {
-        printf("Error: not a Ethernet type ARP, how did it end up here?\n");
+        // printf("Error: not a Ethernet type ARP, how did it end up here?\n");
         goto drop_pkt;
     }
 
     if (arphdr->protype != ARP_IPV4) {
-        printf("Error: In ARP, not an IPv4 protocol, dropping message \n");
+        // printf("Error: In ARP, not an IPv4 protocol, dropping message \n");
         goto drop_pkt;
     }
 
@@ -101,7 +101,7 @@ void arp_rx(struct subuff *skb)
     switch (arphdr->opcode) {
         case ARP_REQUEST:
             if (!(netdev = netdev_get(arpdata->dst_ip))) {
-                printf("This ARP request was not for us, dropping \n");
+                // printf("This ARP request was not for us, dropping \n");
                 goto drop_pkt;
             }
             // otherwise reply
@@ -111,7 +111,7 @@ void arp_rx(struct subuff *skb)
             // we already processed the reply
             goto drop_pkt;
         default:
-            printf("ARP: Opcode not supported\n");
+            // printf("ARP: Opcode not supported\n");
             goto drop_pkt;
     }
 
@@ -128,7 +128,7 @@ int arp_request(uint32_t src_ip, uint32_t dst_ip, struct anp_netdev *netdev)
 
     sub = alloc_arp_sub();
     if (!sub) {
-        printf("Error: allocation of the arp sub in request failed \n");
+        // printf("Error: allocation of the arp sub in request failed \n");
         return -1;
     }
 
