@@ -122,44 +122,67 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
     int ret;
     int totalSent = 0;
     struct subuff *sending;
-    connection->windowSent = 0;
+    // connection->windowSent = 0;
 
     while(!sub_queue_empty(subsToSend)) {
         sending = sub_dequeue(subsToSend);
         uint32_t lastByte = sending->len - TCP_HDR_LEN;
-        
+
+        struct tcpHdr *currSub = tcpHdrFromSub(sending);
+        currSub->tcpSeqNum = htonl(getSeqNum(connection));
+        // printf("SENDINGING SEQ %d\n", ntohl(currSub->tcpSeqNum));
+
         setSeqNum(connection, getSeqNum(connection) + lastByte);
         
+        connection->windowSent += lastByte;
+        // printf("WINDOW SENT %d window max %d\n",connection->windowSent, connection->peerWindowSize);
+        if(connection->windowSent + MSS >= connection->peerWindowSize) {
+            // printf("WINDOWSENT = %d PEER WINDOW = %d\n", connection->windowSent, connection->peerWindowSize);
+            setWaitingForAck(connection, true);
+            // printf("waiting\n");
+            // while(connection->windowSent > 0) {
+            //     sleep(1);
+            //     printf("NOT 0\n");
+            // }
+        }
+
+          if(getWaitingForAck(connection)) {
+            // printf("waiting for ack\n");
+            // exit(-1);
+            int wait = waitForAck(connection);
+            if(wait == -1) {
+                printf("Wait failed\n");
+                // connection->windowSent = 0;
+                return wait;
+            }
+            // connection->windowSent = 0;
+        }
 
         if(getIsLocal(connection)) {
             tcpRx(sending);
             ret = sending->len;
         }
         else {
+            
             ret = ip_output(connection->sock->dstaddr, sending)-54; //tcp header size 54 != TCP_HDR_LEN
+            // printf("out with %ld\n",ntohl(currSub->tcpSeqNum));
+            // printf("packet out %d\n", connection->windowSent);
             if(ret < 0) {
                 return ret;
             }
         }
 
         totalSent += ret;
-        connection->windowSent = totalSent;
-        if(connection->windowSent >= connection->peerWindowSize || sub_queue_empty(subsToSend)) {
-            setWaitingForAck(connection, true);
-        }
         
-        if(getWaitingForAck(connection)) {
-            int wait = waitForAck(connection);
-            if(wait == -1) {
-                return wait;
-            }
-            connection->windowSent = 0;
-        }
+        
+      
         
         if(!getIsLocal(connection)) {
             free_sub(sending);
         }
     }
+    // connection->windowSent = 0;
+    
     return totalSent;
 }
 

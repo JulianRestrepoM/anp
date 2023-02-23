@@ -88,20 +88,25 @@ int handleAck(struct subuff *sub) {
 
     struct iphdr *ipHdr = IP_HDR_FROM_SUB(sub);
     size_t currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN;
+    // printf("TCP PAYLOAD = %d to port %d\n", currentSize, ntohs(hdr->tcpDest));
 
     if(incomingConnection == NULL) {
         goto dropPkt;
     }
 
     if(currentSize == 0) {
-        if(getWaitingForAck(incomingConnection) == true) {
-            if(ackNum == getSeqNum(incomingConnection)) {
-                setWaitingForAck(incomingConnection, false);
-                free_sub(sub);
-                return 0;
-            }
-        }
-        incomingConnection->windowSent = 0;
+        // if(getWaitingForAck(incomingConnection) == true) {
+        //     if(ackNum == getSeqNum(incomingConnection)) {
+        //         setWaitingForAck(incomingConnection, false);
+        //         incomingConnection->peerWindowSize = ntohs(hdr->tcpWinSize);
+        //         free_sub(sub);
+        //         return 0;
+        //     }
+        // }
+        setWaitingForAck(incomingConnection, false);
+        incomingConnection->windowSent = getSeqNum(incomingConnection) - ackNum;
+        // printf("window sent is = %d\n", incomingConnection->windowSent);
+        incomingConnection->peerWindowSize = ntohs(hdr->tcpWinSize);
         free_sub(sub);
         return 0;
     }
@@ -110,6 +115,8 @@ int handleAck(struct subuff *sub) {
         return handleFinAck(sub);
     }
     else if(ntohl(hdr->tcpSeqNum) == incomingConnection->ackNum) {
+        // printf("TCP PAYLOAD = %d to port %d\n", currentSize, ntohs(hdr->tcpDest));
+        incomingConnection->peerWindowSize = ntohs(hdr->tcpWinSize);
         return handleRecv(incomingConnection, sub, hdr);
     }
     dropPkt:

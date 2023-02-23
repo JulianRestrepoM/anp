@@ -52,6 +52,7 @@ static int (*_bind)(int sockfd, const struct sockaddr *addr, socklen_t addrlen) 
 static int (*_listen)(int sockfds, int backlog) = NULL;
 static int (*_accept)(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) = NULL;
 static int (*_fcntl64)(int fd, int cmd, ...) = NULL;
+static int (*_fcntl)(int fd, int cmd, ...) = NULL;
 static int (*___poll)(struct pollfd *fds, nfds_t nfds, int timeout) = NULL;
 static ssize_t (*_sendmsg)(int sockfd, const struct msghdr *msg, int flags) = NULL;
 static int (*___sendmmsg)(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags) = NULL;
@@ -145,7 +146,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen){
 }
 
 ssize_t send(int sockfd, const void *buf, size_t len, int flags){
-    // printf("CLIENT CALLED: send: sockfd%d\n", sockfd);
+    // printf("CLIENT CALLED: send: sockfd%d len %d\n", sockfd, len);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
         struct connection *connection = findConnectionByFd(sockfd);
@@ -242,20 +243,39 @@ int getsockopt(int sockfd, int level, int optname, void *restrict optval, sockle
                 *optvalResult = SOCK_STREAM;
                 return 0;
             }
-            if(optname == SO_ERROR) {
+            else if(optname == SO_ERROR) {
+                return 0;
+            }
+            else if(optname == SO_SNDBUF) {
+                int *optvalResult = (int*)optval;
+                *optvalResult = WIN_SIZE;
+                return 0;
+            }
+            else if(optname == SO_RCVBUF) {
+                int *optvalResult = (int*)optval;
+                *optvalResult = WIN_SIZE;
                 return 0;
             }
             else {
-                // printf("getsockopt unsupported optname\n");
+                printf("getsockopt unsupported optname\n");
                 _getsockopt(sockfd, level, optname, optval, optlen);
-                // exit(-1);
+                exit(-1);
             }
         }
+        else if(level == 6) { // SOL_TCP
+            if(optname == 2) { //TCP_MAXSEG
+                int *optvalResult = (int*)optval;
+                *optvalResult = MSS;
+                return 0;
+            }
+        } 
         else{
-            // printf("getsockopt unsupported level\n");
+            
+            printf("getsockopt unsupported level\n");
             _getsockopt(sockfd, level, optname, optval, optlen);
-            // exit(-1);
+            exit(-1);
         }
+        return 0;
         //  exit(0);
     }
     return _getsockopt(sockfd, level, optname, optval, optlen);
@@ -352,7 +372,22 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
     // printf("CLIENT CALLED: select; \n ");
     if(nfds > ANP_SOCKET_MIN_VAL) {
         if(readfds != NULL) {
-            struct socket *sock = getSocketByFd(sockHead.highestFd);
+            int sockfd = 0;
+            for(int i = sockHead.highestFd; i >= ANP_SOCKET_MIN_VAL; i--) {
+                if(FD_ISSET(i, readfds)) {
+                    sockfd = i;
+                    break;
+                }
+            }
+            if(sockfd == 0) {
+                printf("DID NOt FIND ANP SOCK\n");
+                return _select(nfds, readfds, writefds, exceptfds, timeout);
+            }
+            struct socket *sock = getSocketByFd(sockfd);
+            if(!timeout) {
+                // _select(nfds, readfds, writefds, exceptfds, timeout);
+                return 1;
+            }
             if(busyWaitingSub(sock->recvPkts, timeout->tv_sec)) {
                 return 1;
             }
@@ -498,6 +533,12 @@ int fcntl64(int fd, int cmd, ...) {
     return result;    
 }
 
+int fcntl(int fd, int cmd, ...) {
+    va_list args;
+    va_start(args, cmd);
+    return fcntl64(fd, cmd, args);
+}
+
 ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags) {
     // printf("CLIENT CALLED: sendmsg %d\n", sockfd);
     return _sendmsg(sockfd, msg, flags);
@@ -577,6 +618,7 @@ void _function_override_init()
     _listen = dlsym(RTLD_NEXT, "listen");
     _accept = dlsym(RTLD_NEXT, "accept");
     _fcntl64 = dlsym(RTLD_NEXT, "fcntl64");
+    _fcntl = dlsym(RTLD_NEXT, "fcntl");
     _sendmsg = dlsym(RTLD_NEXT, "sendmsg");
     ___sendmmsg = dlsym(RTLD_NEXT, "__sendmmsg");
     _ioctl = dlsym(RTLD_NEXT, "ioctl");

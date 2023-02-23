@@ -173,7 +173,7 @@ int waitForAck(struct connection *connection) {
     if(!connection->isLocalConnection) {
         time_t start = time(NULL);
         time_t currTime;
-        int timeout = 1;
+        int timeout = 3;
         do {
             if(!connection->waitingForAck) {
                 return 0;
@@ -304,6 +304,7 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
             pthread_mutex_lock(&connection->sock->sock_lock);
             while(!sub_queue_empty(connection->sock->recvPkts) && lenRecv < len) {
                 current = sub_peek(connection->sock->recvPkts);
+                // printf("current len = %d\n", current->len);
                 ipHdr = IP_HDR_FROM_SUB(current);
                 if(!ipHdr) {
                     // printf("iphdr is null\n");
@@ -311,29 +312,47 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                     return -1;
                 }
                 currentSize = IP_PAYLOAD_LEN(ipHdr) - TCP_HDR_LEN - current->read;
+                int payload = currentSize + current->read;
                 void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN + current->read;
                 void *dest = buf + lenRecv;
                  
+                // printf("current->len %d  current size %d   read %d  payload %d\n",current->len, currentSize, current->read, currentSize+current->read);
                 
+                // if((currentSize + lenRecv) > len ) {
+                //     currentSize = len -lenRecv;
+                //     lenRecv += currentSize;
+                //     memcpy(dest, src, currentSize);
+                //     printf("here 1\n");
+                // }
+                // else {
+                //     memcpy(dest, src, currentSize);
+                //     lenRecv += currentSize;
+                //     printf("here 2\n");
+                // }
+                // if(current->len >= currentSize) {
+                //     sub_dequeue(connection->sock->recvPkts);
+                //     free_sub(current);
+                //     printf("here 3\n");
+                // }
+                // else {
+                //     int read = current->read;
+                //     read += currentSize;
+                //     current->read = read;
+                //     printf("here 4\n");
+                // }
+
                 if((currentSize + lenRecv) > len ) {
                     currentSize = len -lenRecv;
                     lenRecv += currentSize;
+                    current->read+=currentSize;
                     memcpy(dest, src, currentSize);
                 }
                 else {
                     memcpy(dest, src, currentSize);
                     lenRecv += currentSize;
-                }
-                if(current->len >= currentSize) {
                     sub_dequeue(connection->sock->recvPkts);
                     free_sub(current);
-                }
-                else {
-                    int read = current->read;
-                    read += currentSize;
-                    current->read = read;
-                }
-                    
+                }   
             }
             pthread_mutex_unlock(&connection->sock->sock_lock);
         }
