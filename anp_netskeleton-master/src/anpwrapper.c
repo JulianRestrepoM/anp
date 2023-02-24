@@ -75,7 +75,7 @@ static int is_socket_supported(int domain, int type, int protocol)
 }
 
 int socket(int domain, int type, int protocol) {
-    // printf("CLIENT CALLED: socket: domain=%d, type=%d, protocol=%d\n", domain, type, protocol);
+    printf("CLIENT CALLED: socket: domain=%d, type=%d, protocol=%d\n", domain, type, protocol);
     if (is_socket_supported(domain, type, protocol)) {
         if((type & SOCK_STREAM) || (type & SOCK_DGRAM)) {
         struct socket *newSocket = createSocket(domain, type, protocol);
@@ -88,7 +88,7 @@ int socket(int domain, int type, int protocol) {
 
 
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen){
-    // printf("CLIENT CALLED: connect: sockfd=%d\n", sockfd);
+    printf("CLIENT CALLED: connect: sockfd=%d\n", sockfd);
     bool is_anp_sockfd = isFdUsed(sockfd);
     if (is_anp_sockfd)
     {
@@ -202,7 +202,7 @@ int close (int sockfd){
     // printf("CLIENT CALLED: close: sockf=%d\n", sockfd); //speedtest doesnt like this print
     bool is_anp_sockfd = isFdUsed(sockfd);
     if(is_anp_sockfd) {
-        // printf("CLIENT CALLED: close: sockf=%d\n", sockfd); 
+        printf("CLIENT CALLED: close: sockf=%d\n", sockfd); 
         int ret = 0;
         struct connection *toClose = findConnectionByFd(sockfd);
         if(!toClose) {
@@ -227,7 +227,7 @@ int close (int sockfd){
 }
 
 int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen) {
-    // printf("CLIENT CALLED: setsockopt; sockf=%d level %d optname %d\n", sockfd, level, optname);
+    printf("CLIENT CALLED: setsockopt; sockf=%d level %d optname %d\n", sockfd, level, optname);
     if(isFdUsed(sockfd)) {
         return 0;
     }
@@ -235,7 +235,7 @@ int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t
 }
 
 int getsockopt(int sockfd, int level, int optname, void *restrict optval, socklen_t *restrict optlen) {
-    // printf("CLIENT CALLED: getsockopt; sockf=%d level %d optname %d\n", sockfd, level, optname);
+    printf("CLIENT CALLED: getsockopt; sockf=%d level %d optname %d\n", sockfd, level, optname);
     if(isFdUsed(sockfd)) {
         if(level == SOL_SOCKET) {
             if(optname == SO_TYPE) {
@@ -283,12 +283,12 @@ int getsockopt(int sockfd, int level, int optname, void *restrict optval, sockle
 }
 
 ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) {
-    // printf("CLIENT CALLED: sendto; fd=%d\n", sockfd);
+    printf("CLIENT CALLED: sendto; fd=%d\n", sockfd);
     return _sendto(sockfd, buf, len, flags, dest_addr, addrlen);
 }
 
 ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen) {
-    // printf("CLIENT CALLED: recvfrom; fd=%d wants %d\n", sockfd, len);
+    printf("CLIENT CALLED: recvfrom; fd=%d wants %d\n", sockfd, len);
     if(isFdUsed(sockfd)) {
         if(buf == NULL) {
             // printf("recvfrom buf is null\n");
@@ -304,7 +304,7 @@ ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 
 
 int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
-    // printf("CLIENT CALLED: getpeername; sock=%d\n", sockfd);
+    printf("CLIENT CALLED: getpeername; sock=%d\n", sockfd);
     if(isFdUsed(sockfd)) {
          struct socket *currsock = getSocketByFd(sockfd);
         if(*addrlen < sizeof(currsock->srcaddrlen)) {
@@ -328,7 +328,7 @@ int getpeername (int sockfd, struct sockaddr *restrict addr, socklen_t *restrict
 }
 
 int getsockname(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
-    // printf("CLIENT CALLED: getsockname; sockfd%d\n", sockfd);
+    printf("CLIENT CALLED: getsockname; sockfd%d\n", sockfd);
     if(isFdUsed(sockfd)) {
         struct socket *currsock = getSocketByFd(sockfd);
         if(*addrlen < sizeof(currsock->srcport)) {
@@ -368,32 +368,88 @@ ssize_t read(int fd, void *buf, size_t count) {
     return _read(fd, buf, count);
 }
 
+int readyReads(fd_set *readSet, int timeout) {
+    if(timeout >=1000) {
+        timeout = 5;
+    }
+    time_t start = time(NULL);
+    time_t currTime;
+    struct socket *currSocket;
+    struct list_head *socketList;
+    // FD_ZERO(readSet);
+    int readyFds = 0;
+    if(readSet == NULL) {
+        // printf("its null\n");
+        return 0;
+    }
+    if(sockHead.listHead == NULL) {
+        return 0;
+    }
+
+    do {
+        list_for_each(socketList, sockHead.listHead) {
+            currSocket = list_entry(socketList, struct socket, list);
+            if(FD_ISSET(currSocket->fd, readSet)) {
+                // printf("READING checking %d\n", currSocket->fd);
+                if(!sub_queue_empty(currSocket->recvPkts)) {
+                    FD_SET(currSocket->fd, readSet);
+                    // printf("FD %d is ready\n", currSocket->fd);
+                    readyFds++;
+                }
+                else {
+                    FD_CLR(currSocket->fd, readSet);
+                }
+            }
+        }
+        if(readyFds > 0) {
+            return readyFds;
+        }
+        usleep(1000);
+        time(&currTime);
+    } while(currTime - start<= timeout);
+}
+
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
     // printf("CLIENT CALLED: select; \n ");
     if(nfds > ANP_SOCKET_MIN_VAL) {
+        int readySocks = 0;
+        if(writefds != NULL) {
+            for(int i = sockHead.highestFd; i > ANP_SOCKET_MIN_VAL; i--) {
+                if(FD_ISSET(i, writefds)) {
+                    readySocks++;
+                    // printf("WRITE checking %d\n", i);
+                }
+                
+            }
+        }
+
+        bool anpfd = false;
         if(readfds != NULL) {
-            int sockfd = 0;
-            for(int i = sockHead.highestFd; i >= ANP_SOCKET_MIN_VAL; i--) {
+            for(int i = sockHead.highestFd; i > ANP_SOCKET_MIN_VAL; i--) {
                 if(FD_ISSET(i, readfds)) {
-                    sockfd = i;
-                    break;
+                    anpfd = true;
+                    // printf("readfds %d\n", i);
                 }
             }
-            if(sockfd == 0) {
-                printf("DID NOt FIND ANP SOCK\n");
-                return _select(nfds, readfds, writefds, exceptfds, timeout);
+        }  
+        if(anpfd) {
+            // printf("ANPFD is true\n");
+            if(timeout == NULL) {
+                readySocks += readyReads(readfds, 0);
             }
-            struct socket *sock = getSocketByFd(sockfd);
-            if(!timeout) {
-                // _select(nfds, readfds, writefds, exceptfds, timeout);
-                return 1;
+            else {
+                if(readfds != NULL) {
+                    readySocks += readyReads(readfds, timeout->tv_sec);
+                }
             }
-            if(busyWaitingSub(sock->recvPkts, timeout->tv_sec)) {
-                return 1;
-            }
-            return 0;
+            // printf("SELECT RETURN %d\n", readySocks);
+            return readySocks;
         }
-        return 1;
+        return readySocks;
+        // else{
+        //   _select(nfds, readfds, writefds, exceptfds, timeout);  
+        // } 
+        
     }
     return _select(nfds, readfds, writefds, exceptfds, timeout);
 }
@@ -403,7 +459,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout) {
     // printf("CLIENT CALLED: poll %d timout %d\n", fd, timeout);
     if(isFdUsed(fd)) {
         int pollEvent = fds->events;
-        // printf("CLIENT CALLED: poll %d timout %d event %d\n", fd, timeout, pollEvent);
+        printf("CLIENT CALLED: poll %d timout %d event %d\n", fd, timeout, pollEvent);
         if(pollEvent == 4) { //POLLOUT
             fds->revents = 4;
             return 1;
@@ -460,7 +516,7 @@ int __poll(struct pollfd *fds, nfds_t nfds, int timeout) { //wget
 }
 
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
-    // printf("CLIENT CALLED: bind; sock%d\n", sockfd);
+    printf("CLIENT CALLED: bind; sock%d\n", sockfd);
     if(isFdUsed(sockfd)) {
         struct socket *sock = getSocketByFd(sockfd);
         struct sockaddr_in *sin = (struct sockaddr_in *)addr;
@@ -474,7 +530,7 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 }
 
 int listen(int sockfd, int backlog) {
-    // printf("CLIENT CALLED: listen; sock%d, backlog %d\n", sockfd, backlog);
+    printf("CLIENT CALLED: listen; sock%d, backlog %d\n", sockfd, backlog);
     if(isFdUsed(sockfd)) { 
         struct socket *sock = getSocketByFd(sockfd);
         sock->backlog = backlog;
@@ -485,7 +541,7 @@ int listen(int sockfd, int backlog) {
 }
 
 int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrlen) {
-    // printf("CLIENT CALLED: accept sock %d\n", sockfd);
+    printf("CLIENT CALLED: accept sock %d\n", sockfd);
     if(isFdUsed(sockfd)) {
         struct socket *sock = getSocketByFd(sockfd);
         while(!sock->pendingC) {
@@ -500,7 +556,7 @@ int accept(int sockfd, struct sockaddr *restrict addr, socklen_t *restrict addrl
 }
 
 int fcntl64(int fd, int cmd, ...) {
-    // printf("CLIENT CALLED: fcntl socket %d CMD = %d\n", fd, cmd);
+    printf("CLIENT CALLED: fcntl socket %d CMD = %d\n", fd, cmd);
     if(isFdUsed(fd)) {
         struct socket *sock = getSocketByFd(fd);
 
@@ -540,12 +596,12 @@ int fcntl(int fd, int cmd, ...) {
 }
 
 ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags) {
-    // printf("CLIENT CALLED: sendmsg %d\n", sockfd);
+    printf("CLIENT CALLED: sendmsg %d\n", sockfd);
     return _sendmsg(sockfd, msg, flags);
 }
 
 int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags) {
-    // printf("CLIENT CALLED: sendmmsg (Multiple) %d falgs %d\n", sockfd, flags);
+    printf("CLIENT CALLED: sendmmsg (Multiple) %d falgs %d\n", sockfd, flags);
     if(isFdUsed(sockfd)) {   
         for(int i = 0; i < vlen; i++) {
             if(msgvec->msg_hdr.msg_iovlen > 1) {
@@ -563,7 +619,7 @@ int __sendmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags)
 int ioctl(int fd, unsigned long request, ...) {
     // printf("CLIENT CALLED: ioctl request %ld sock %d\n", request, fd);
     if(isFdUsed(fd)) {
-        // printf("ANP ioctl %d\n", fd);
+        printf("ANP ioctl %d\n", fd);
         if(request == 21531) { // FIONREAD
             va_list args;
             va_start(args, request);
