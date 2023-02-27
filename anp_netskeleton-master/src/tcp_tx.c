@@ -148,14 +148,12 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
 
           if(getWaitingForAck(connection)) {
             // printf("waiting for ack\n");
-            // exit(-1);
             int wait = waitForAck(connection);
             if(wait == -1) {
                 printf("Wait failed\n");
-                // connection->windowSent = 0;
                 return wait;
             }
-            // connection->windowSent = 0;
+            usleep(1000);
         }
 
         if(getIsLocal(connection)) {

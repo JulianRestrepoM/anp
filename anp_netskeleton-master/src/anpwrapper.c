@@ -219,7 +219,7 @@ int close (int sockfd){
         sockListRemove(sock);
         connectionListRemove(toClose);
 
-        free(toClose);
+        // free(toClose);
         return ret;
     }
     // the default path
