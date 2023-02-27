@@ -392,25 +392,36 @@ int readyReads(fd_set *readSet, int timeout) {
             if(FD_ISSET(currSocket->fd, readSet)) {
                 // printf("READING checking %d\n", currSocket->fd);
                 if(!sub_queue_empty(currSocket->recvPkts)) {
-                    FD_SET(currSocket->fd, readSet);
+                    // FD_SET(currSocket->fd, readSet);
                     // printf("FD %d is ready\n", currSocket->fd);
                     readyFds++;
-                }
-                else {
-                    FD_CLR(currSocket->fd, readSet);
                 }
             }
         }
         if(readyFds > 0) {
-            return readyFds;
+            break;
         }
-        usleep(1000);
+        // usleep(1000);
         time(&currTime);
     } while(currTime - start<= timeout);
+
+    list_for_each(socketList, sockHead.listHead) {
+            currSocket = list_entry(socketList, struct socket, list);
+            if(FD_ISSET(currSocket->fd, readSet)) {
+                // printf("READING checking %d\n", currSocket->fd);
+                if(sub_queue_empty(currSocket->recvPkts)) {
+                    // FD_SET(currSocket->fd, readSet);
+                    // printf("FD %d is ready\n", currSocket->fd);
+                    FD_CLR(currSocket->fd, readSet);
+                }
+            }
+        }
+    return readyFds;
+
 }
 
 int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
-    // printf("CLIENT CALLED: select; \n ");
+    // printf("CLIENT CALLED: select;\n ");
     if(nfds > ANP_SOCKET_MIN_VAL) {
         int readySocks = 0;
         if(writefds != NULL) {
