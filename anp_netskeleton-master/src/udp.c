@@ -11,16 +11,17 @@ struct subuff *allocUdpSub(int dataLen) {
 struct subuff_head *dataSplitUdp(struct connection *connection, const void *buf, size_t len) {
     int maxSendLen = ANP_MTU_15_MAX_SIZE - (ETH_HDR_LEN + IP_HDR_LEN + UDP_HDR_LEN + 8);
     int lenToSend = maxSendLen;
-    int lastSentPtr = 0;
+    unsigned int lastSentPtr = 0;
+    unsigned int theLen =  (unsigned int)len;
 
-    if(len <= maxSendLen) { //if first packet is smaller than max send, then it sends maxsend instead of just len
+    if(theLen <= maxSendLen) { //if first packet is smaller than max send, then it sends maxsend instead of just len
         lenToSend = len;
     }
 
     struct subuff_head *subsToSend = (struct subuff_head *) malloc(sizeof(struct subuff_head));
     sub_queue_init(subsToSend);
 
-    while(lastSentPtr < len) {
+    while(lastSentPtr < theLen) {
         struct subuff *sub = allocUdpSub(lenToSend);
         sub_queue_tail(subsToSend, sub);
         sub_push(sub, lenToSend);
@@ -35,23 +36,34 @@ struct subuff_head *dataSplitUdp(struct connection *connection, const void *buf,
         hdrToSend->checksum = 0;
         lastSentPtr += lenToSend;
 
-        if((len - lastSentPtr) > maxSendLen) {
+        if((theLen - lastSentPtr) > maxSendLen) {
             lenToSend = maxSendLen;
         }
         else {
-            lenToSend = (len - lastSentPtr);
+            lenToSend = (theLen - lastSentPtr);
         }
     }
     return subsToSend;
 }
 
 int sendUdpData(struct connection *connection, const void *buf, size_t len) {
-    struct subuff_head *subsToSend = dataSplitUdp(connection, buf, len);
+    struct subuff_head *subsToSend;
     int ret;
     int totalSent = 0;
     struct subuff *sending;
+    unsigned int theLen =  (unsigned int)len;
 
-    while(sub_queue_empty(subsToSend) == 0) {
+    while(len > 0) {
+        if(len > WIN_SIZE) {
+            subsToSend = dataSplitUdp(connection, buf, WIN_SIZE);
+            len -= WIN_SIZE;
+        }
+        else {
+            subsToSend = dataSplitUdp(connection, buf, len);
+            len = 0;
+        }
+
+        while(sub_queue_empty(subsToSend) == 0) {
         sending = sub_dequeue(subsToSend);
         struct subuff sendingCpy = *sending;
         ret = ip_output(connection->sock->dstaddr, sending);
@@ -74,6 +86,9 @@ int sendUdpData(struct connection *connection, const void *buf, size_t len) {
         totalSent += ret;
         free_sub(sending);
     }
+    }
+
+    
     return totalSent;
 }
 
