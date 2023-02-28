@@ -178,8 +178,10 @@ int waitForAck(struct connection *connection) {
             if(!connection->waitingForAck) {
                 return 0;
             }
+            if(connection->doubleAcks >= 3) {
+                return 1;
+            }
             time(&currTime);
-            // printf("Elapesed %d\n", currTime - start);
         } while(currTime - start<= timeout);
         return -1;
     }
@@ -241,12 +243,8 @@ int doTcpHandshake(struct connection *connection) {
         setState(connection, SYN_SENT);
     }
     if(getState(connection) != SYN_SENT) {
-        // printf("handshake state %d\n", getState(connection));
-        // printf("error: Synack timeout\n");
         return -1;
     }
-
-    // setLastRecvSeqNum(connection, getLastRecvSeq(connection) + 1);
     connection->ackNum += 1;
     int ackCode = sendAck(connection, connection->ackNum);
     if(ackCode >= 0) {
@@ -315,31 +313,6 @@ int getData(struct connection *connection, void *buf, size_t len) { //TODO: i th
                 int payload = currentSize + current->read;
                 void *src = current->head + IP_HDR_LEN + ETH_HDR_LEN + TCP_HDR_LEN + current->read;
                 void *dest = buf + lenRecv;
-                 
-                // printf("current->len %d  current size %d   read %d  payload %d\n",current->len, currentSize, current->read, currentSize+current->read);
-                
-                // if((currentSize + lenRecv) > len ) {
-                //     currentSize = len -lenRecv;
-                //     lenRecv += currentSize;
-                //     memcpy(dest, src, currentSize);
-                //     printf("here 1\n");
-                // }
-                // else {
-                //     memcpy(dest, src, currentSize);
-                //     lenRecv += currentSize;
-                //     printf("here 2\n");
-                // }
-                // if(current->len >= currentSize) {
-                //     sub_dequeue(connection->sock->recvPkts);
-                //     free_sub(current);
-                //     printf("here 3\n");
-                // }
-                // else {
-                //     int read = current->read;
-                //     read += currentSize;
-                //     current->read = read;
-                //     printf("here 4\n");
-                // }
 
                 if((currentSize + lenRecv) > len ) {
                     currentSize = len -lenRecv;

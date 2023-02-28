@@ -94,6 +94,10 @@ void addNewConnection(struct connection *newConnection, struct socket *sock) {
     newConnection->ackNum = 0;
     newConnection->peerWindowSize = MSS;
     newConnection->windowSent = 0;
+    newConnection->lastRecvdAck = 0;
+    newConnection->doubleAcks = 0;
+    newConnection->retransmitQ = (struct subuff_head *) malloc(sizeof(struct subuff_head));
+    sub_queue_init(newConnection->retransmitQ);
 
     pthread_mutex_unlock(&newConnection->connectionLock);
     connectionListAdd(newConnection);
