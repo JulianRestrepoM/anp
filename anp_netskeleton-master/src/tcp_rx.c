@@ -33,7 +33,7 @@ int handleSyn(struct subuff *sub) {
         goto dropPkt;
     }
     if(!serverSocket->isPassive) {
-        printf("ERROR handleSyn: serverSocket not passive\n");
+        // printf("ERROR handleSyn: serverSocket not passive\n");
         goto dropPkt;
     }
     if(serverSocket->pendingC) {

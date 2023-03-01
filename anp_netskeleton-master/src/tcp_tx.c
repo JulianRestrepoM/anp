@@ -224,7 +224,7 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
                 else if(wait == 1) {
                     retransmitTcp(connection);
                 }
-                // usleep(1000);
+                usleep(1000);
             }
 
             if(getIsLocal(connection)) {

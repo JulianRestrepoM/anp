@@ -216,8 +216,8 @@ int close (int sockfd){
         if(sock->type == SOCK_STREAM) {
             ret = doTcpClose(toClose);
         }
-        sockListRemove(sock);
-        connectionListRemove(toClose);
+        // sockListRemove(sock);
+        // connectionListRemove(toClose);
 
         // free(toClose);
         return ret;
@@ -354,6 +354,11 @@ ssize_t write(int fd, const void*buf, size_t count) {
     // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
     if(isFdUsed(fd)) {
         // printf("CLIENT CALLED: write; sock=%d, count=%d\n", fd, count);
+        struct socket *sock = getSocketByFd(fd);
+        if(sock->type == SOCK_DGRAM) {
+            return send(fd, buf, count, 0)-42;
+        }
+        // ssize_t result =send(fd, buf, x, 0);
         return send(fd, buf, count, 0);
     }
     return _write(fd, buf, count);
