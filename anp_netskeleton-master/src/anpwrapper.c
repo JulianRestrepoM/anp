@@ -373,7 +373,7 @@ ssize_t read(int fd, void *buf, size_t count) {
     return _read(fd, buf, count);
 }
 
-int readyReads(fd_set *readSet, int timeout) {
+int readyReads(fd_set *readSet, int timeout, int readySocks) {
     if(timeout >=1000) {
         timeout = 5;
     }
@@ -381,7 +381,6 @@ int readyReads(fd_set *readSet, int timeout) {
     time_t currTime;
     struct socket *currSocket;
     struct list_head *socketList;
-    int readyFds = 0;
     if(readSet == NULL) {
         return 0;
     }
@@ -394,11 +393,11 @@ int readyReads(fd_set *readSet, int timeout) {
             currSocket = list_entry(socketList, struct socket, list);
             if(FD_ISSET(currSocket->fd, readSet)) {
                 if(!sub_queue_empty(currSocket->recvPkts)) {
-                    readyFds++;
+                    readySocks++;
                 }
             }
         }
-        if(readyFds > 0) {
+        if(readySocks > 0) {
             break;
         }
         time(&currTime);
@@ -412,7 +411,7 @@ int readyReads(fd_set *readSet, int timeout) {
                 }
             }
         }
-    return readyFds;
+    return readySocks;
 
 }
 
@@ -439,11 +438,11 @@ int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struc
         }  
         if(anpfd) {
             if(timeout == NULL) {
-                readySocks += readyReads(readfds, 0);
+                readySocks = readyReads(readfds, 0, readySocks);
             }
             else {
                 if(readfds != NULL) {
-                    readySocks += readyReads(readfds, timeout->tv_sec);
+                    readySocks = readyReads(readfds, timeout->tv_sec, readySocks);
                 }
             }
             return readySocks;

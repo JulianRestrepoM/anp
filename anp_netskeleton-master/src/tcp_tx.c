@@ -153,6 +153,7 @@ int removeRecvdSubs(struct connection *connection) {
         }
         if(connection->lastRecvdAck > ntohl(currHdr->tcpSeqNum)) {
             sub_dequeue(connection->retransmitQ);
+            free_sub(currSub);
         }
         else {
             acked = false;
@@ -176,8 +177,10 @@ int retransmitTcp(struct connection *connection) {
         ip_output(connection->sock->dstaddr, currSub);
         if(connection->doubleAcks >= 3) {
             connection->doubleAcks = 0;
+            free_sub(currSub);
             return 0;
         }
+        free_sub(currSub);
     }
 
 }
