@@ -1,1 +1,0 @@
-/usr/bin/cc    CMakeFiles/anp_server.dir/src/tcp_server.c.o CMakeFiles/anp_server.dir/src/common.c.o  -o bin/anp_server 

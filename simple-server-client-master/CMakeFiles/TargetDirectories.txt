@@ -1,4 +1,0 @@
-/home/julian/Uni/Thesis/anp/simple-server-client-master/CMakeFiles/rebuild_cache.dir
-/home/julian/Uni/Thesis/anp/simple-server-client-master/CMakeFiles/edit_cache.dir
-/home/julian/Uni/Thesis/anp/simple-server-client-master/CMakeFiles/anp_client.dir
-/home/julian/Uni/Thesis/anp/simple-server-client-master/CMakeFiles/anp_server.dir
