@@ -8,7 +8,7 @@ Within anp_netskeleton-master
  sudo make install  
  ```
 
- DNS Stub resolver must also be disabled. [Here is a guade on how](https://askubuntu.com/questions/907246/how-to-disable-systemd-resolved-in-ubuntu/907249#907249)
+ DNS Stub resolver must also be disabled. [Here is a guide on how](https://askubuntu.com/questions/907246/how-to-disable-systemd-resolved-in-ubuntu/907249#907249)
 
 
  # How to use ANP
