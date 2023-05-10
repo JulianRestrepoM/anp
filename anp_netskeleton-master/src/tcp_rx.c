@@ -100,6 +100,11 @@ int handleAck(struct subuff *sub) {
         
         if(incomingConnection->lastRecvdAck == ackNum) {
             incomingConnection->doubleAcks++;
+            if(incomingConnection->doubleAcks >= 3) {
+                setWaitingForAck(incomingConnection, true);
+                // printf("three dup acks\n");
+            }
+            
         }
         else {
             incomingConnection->doubleAcks = 0;

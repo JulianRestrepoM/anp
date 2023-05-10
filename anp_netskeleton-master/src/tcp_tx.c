@@ -155,7 +155,13 @@ int removeRecvdSubs(struct connection *connection) {
             sub_dequeue(connection->retransmitQ);
             free_sub(currSub);
         }
+        // else if((ntohl(currHdr->tcpSeqNum) - connection->lastRecvdAck) > WIN_SIZE) {
+        //     // printf("SAVED\n");
+        //     sub_dequeue(connection->retransmitQ);
+        //     free_sub(currSub);
+        // }
         else {
+            printf("Last ack = %ld  !> current Seq = %ld\n", connection->lastRecvdAck, ntohl(currHdr->tcpSeqNum));
             acked = false;
         }
     }
@@ -163,25 +169,71 @@ int removeRecvdSubs(struct connection *connection) {
 }
 
 int retransmitTcp(struct connection *connection) {
+    printf(" starting restransmitting\n");
 
     removeRecvdSubs(connection);
-
     uint32_t lastSentSeq = getSeqNum(connection);
     struct subuff *currSub = sub_peek(connection->retransmitQ);
+    if(sub_queue_empty(connection->retransmitQ)) {
+        printf("its empty\n");
+        return 0;
+    }
     struct tcpHdr *currHdr = tcpHdrFromSub(currSub);
 
     while(connection->lastRecvdAck <= ntohl(currHdr->tcpSeqNum) && !sub_queue_empty(connection->retransmitQ)) {
-        currSub = sub_dequeue(connection->retransmitQ);
+        
+        uint32_t lastByte = currSub->len - TCP_HDR_LEN;
+
+        currSub = sub_peek(connection->retransmitQ);
         currHdr = tcpHdrFromSub(currSub);
 
-        ip_output(connection->sock->dstaddr, currSub);
+        struct subuff *subCopy = allocTcpSub( ANP_MTU_15_MAX_SIZE - (ETH_HDR_LEN + IP_HDR_LEN + TCP_HDR_LEN + 8));
+        sub_push(subCopy, ANP_MTU_15_MAX_SIZE - (ETH_HDR_LEN + IP_HDR_LEN + TCP_HDR_LEN + 8));
+        memcpy(subCopy->data, currSub->data, currSub->len - TCP_HDR_LEN);
+        struct tcpHdr *hdrToSendCopy = (struct tcpHdr*) sub_push(subCopy, TCP_HDR_LEN);
+        setGeneralOptionsTcpHdr(hdrToSendCopy, connection, ntohl(currHdr->tcpSeqNum), connection->ackNum);
+        hdrToSendCopy->tcpAck = 1;
+        hdrToSendCopy->tcpPsh = 1;
+        hdrToSendCopy->tcpChecksum = do_tcp_csum((uint8_t *) hdrToSendCopy, TCP_HDR_LEN + (ANP_MTU_15_MAX_SIZE - (ETH_HDR_LEN + IP_HDR_LEN + TCP_HDR_LEN + 8)), IPP_TCP,
+                                              htonl(connection->sock->srcaddr),
+                                              htonl(connection->sock->dstaddr));
+
+        
+
+        int ret = ip_output(connection->sock->dstaddr, subCopy);
         if(connection->doubleAcks >= 3) {
             connection->doubleAcks = 0;
-            free_sub(currSub);
+            free_sub(subCopy);
+            printf(" ending restransmitting 1\n");
             return 0;
         }
-        free_sub(currSub);
+        connection->windowSent += lastByte;
+            if(connection->windowSent + MSS >= connection->peerWindowSize) {
+                setWaitingForAck(connection, true);
+            }
+
+            if(getWaitingForAck(connection)) {
+                // printf("waiting for ack\n");
+                int wait = waitForAck(connection);
+                if(wait != 0) {
+                    // retransmitTcp(connection);
+                    // wait = waitForAck(connection);
+                    // if(wait == -1) {
+                    //     return wait;
+                    // }
+                    printf("Retransmit Failed\n");
+                    return(-1);
+                }
+                
+            }
+            
+            usleep(1000);
+            printf("retransmit good!\n");
+        
+        free_sub(subCopy);
     }
+    printf(" ending restransmitting 2\n");
+    return 0;
 
 }
 
@@ -210,22 +262,30 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
             setSeqNum(connection, getSeqNum(connection) + lastByte);
         
             connection->windowSent += lastByte;
-            if(connection->windowSent + MSS >= connection->peerWindowSize) {
+            if(connection->windowSent + MSS >= connection->peerWindowSize || connection->windowSent + MSS >= WIN_SIZE) {
                 setWaitingForAck(connection, true);
             }
+
+            // if(connection->peerWindowSize < 2* MSS) {
+            //     setWaitingForAck(connection, true);
+            // }
+            // usleep(200);
 
             if(getWaitingForAck(connection)) {
                 // printf("waiting for ack\n");
                 int wait = waitForAck(connection);
                 if(wait == -1) {
-                    retransmitTcp(connection);
+                    int retransmision = retransmitTcp(connection);
                     wait = waitForAck(connection);
                     if(wait == -1) {
                         return wait;
                     }
                 }
                 else if(wait == 1) {
-                    retransmitTcp(connection);
+                    int retransmision = retransmitTcp(connection);
+                    if(retransmision != 0) {
+                        return retransmision;
+                    }
                 }
                 usleep(1000);
             }
@@ -241,7 +301,7 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
                     return ret;
                 }
 
-            removeRecvdSubs(connection);          
+            removeRecvdSubs(connection);        
             
             }
 
