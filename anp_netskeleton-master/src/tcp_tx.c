@@ -152,16 +152,25 @@ int removeRecvdSubs(struct connection *connection) {
             return -1;
         }
         if(connection->lastRecvdAck > ntohl(currHdr->tcpSeqNum)) {
+            // printf("REMOVED\n");
+            // printf("Last ack = %ld  !> current Seq = %ld\n", connection->lastRecvdAck, ntohl(currHdr->tcpSeqNum));
             sub_dequeue(connection->retransmitQ);
             free_sub(currSub);
         }
-        // else if((ntohl(currHdr->tcpSeqNum) - connection->lastRecvdAck) > WIN_SIZE) {
-        //     // printf("SAVED\n");
-        //     sub_dequeue(connection->retransmitQ);
-        //     free_sub(currSub);
-        // }
+        else if((ntohl(currHdr->tcpSeqNum) - connection->lastRecvdAck) > WIN_SIZE && connection->lastRecvdAck != 0) {
+            // printf("SAVED\n");
+            // printf("Last ack = %ld  !> current Seq = %ld\n", connection->lastRecvdAck, ntohl(currHdr->tcpSeqNum));
+            sub_dequeue(connection->retransmitQ);
+            free_sub(currSub);
+        }
         else {
-            printf("Last ack = %ld  !> current Seq = %ld\n", connection->lastRecvdAck, ntohl(currHdr->tcpSeqNum));
+            // printf("ketp\n");
+            // printf("Last ack = %ld  !> current Seq = %ld\n", connection->lastRecvdAck, ntohl(currHdr->tcpSeqNum));
+            // printf("len is %d\n", sub_queue_len(connection->retransmitQ));
+            // if(sub_queue_len(connection->retransmitQ) > 100) {
+            //     printf("borke\n");
+            //     exit(1);
+            // }
             acked = false;
         }
     }
@@ -205,6 +214,7 @@ int retransmitTcp(struct connection *connection) {
             connection->doubleAcks = 0;
             free_sub(subCopy);
             printf(" ending restransmitting 1\n");
+            usleep(1000);
             return 0;
         }
         connection->windowSent += lastByte;
@@ -276,18 +286,29 @@ int sendTcpData(struct connection *connection, const void *buf, size_t len) {
                 int wait = waitForAck(connection);
                 if(wait == -1) {
                     int retransmision = retransmitTcp(connection);
+                    if(retransmision != 0) {
+                        for(int i = 0; i < 3; i ++){
+                            retransmision = retransmitTcp(connection);
+                            if(retransmision == 0) {
+                                printf("retransmit %d succeeded\n", i);
+                                break;
+                            }
+                        }
+                    }
                     wait = waitForAck(connection);
                     if(wait == -1) {
+                        printf("retransmits failed\n");
                         return wait;
                     }
                 }
                 else if(wait == 1) {
                     int retransmision = retransmitTcp(connection);
                     if(retransmision != 0) {
+                        printf("failed rentransmisoin 2\n");
                         return retransmision;
                     }
                 }
-                usleep(1000);
+                // usleep(1000);
             }
 
             if(getIsLocal(connection)) {
